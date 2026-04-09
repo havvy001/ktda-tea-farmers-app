@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>KTDA Tea Farmers Management System</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f4f0; height: 100vh; overflow: hidden; }
+        .header { background: #2c5e2e; color: white; padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; position: fixed; top: 0; left: 0; right: 0; z-index: 200; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .header h1 { font-size: 18px; display: flex; align-items: center; gap: 10px; }
+        .map-page-layout { display: flex; height: calc(100vh - 110px); margin-top: 55px; margin-bottom: 55px; }
+        .map-wrapper { width: 75%; position: relative; height: 100%; background: #e8f5e9; }
+        #map { height: 100%; width: 100%; background: #e8f5e9; }
+        .data-panel { width: 25%; background: white; border-left: 1px solid #ddd; display: flex; flex-direction: column; overflow-y: auto; box-shadow: -2px 0 5px rgba(0,0,0,0.05); }
+        .collapsible-section { border-bottom: 1px solid #eee; }
+        .section-header { padding: 12px 15px; background: #f5f5f5; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: bold; color: #2c5e2e; transition: background 0.2s; }
+        .section-header:hover { background: #e8f5e9; }
+        .section-icon { font-size: 16px; margin-right: 8px; width: 20px; text-align: center; }
+        .section-title { display: flex; align-items: center; gap: 8px; }
+        .section-count { background: #2c5e2e; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; }
+        .section-content { display: none; padding: 12px; max-height: 250px; overflow-y: auto; }
+        .section-content.show { display: block; }
+        .filter-input { width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 12px; }
+        .item-list { max-height: 180px; overflow-y: auto; }
+        .item-card { padding: 8px; margin-bottom: 6px; background: #f9f9f9; border-radius: 6px; cursor: pointer; transition: all 0.2s; border-left: 3px solid #2c5e2e; }
+        .item-card:hover { background: #e8f5e9; transform: translateX(3px); }
+        .item-name { font-weight: 600; font-size: 12px; color: #333; }
+        .item-detail { font-size: 10px; color: #666; margin-top: 2px; }
+        .basemap-control { position: absolute; top: 10px; right: 10px; z-index: 1000; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+        .basemap-btn { padding: 8px 12px; background: white; border: none; border-radius: 8px; cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 8px; width: 100%; }
+        .basemap-dropdown { display: none; position: absolute; top: 100%; right: 0; background: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 140px; margin-top: 5px; z-index: 1001; }
+        .basemap-control.active .basemap-dropdown { display: block; }
+        .basemap-option { padding: 8px 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 11px; border-bottom: 1px solid #eee; }
+        .basemap-option:hover { background: #f0f0f0; }
+        .legend { position: absolute; bottom: 20px; right: 10px; background: rgba(255,255,255,0.95); padding: 10px; border-radius: 8px; font-size: 11px; z-index: 1000; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .legend-item { display: flex; align-items: center; margin: 5px 0; gap: 8px; }
+        .legend-color { width: 14px; height: 14px; border-radius: 3px; }
+        .legend-color.zone { background: #2c5e2e; }
+        .legend-color.farmer { background: #27ae60; }
+        .legend-color.factory { background: #e74c3c; }
+        .legend-color.center { background: #f39c12; }
+        .filter-buttons { display: flex; gap: 5px; margin-bottom: 10px; }
+        .filter-btn { flex: 1; padding: 5px; background: #f0f0f0; border: none; border-radius: 5px; font-size: 10px; cursor: pointer; }
+        .filter-btn:hover { background: #2c5e2e; color: white; }
+        .tabs { display: flex; background: white; position: fixed; bottom: 0; left: 0; right: 0; z-index: 200; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); }
+        .tab { flex: 1; text-align: center; padding: 10px; cursor: pointer; font-size: 12px; font-weight: 500; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+        .tab.active { background: #2c5e2e; color: white; }
+        .tab i { font-size: 16px; margin-bottom: 2px; }
+        .page { display: none; }
+        .page.active { display: block; }
+        .dashboard-content { margin-top: 55px; padding: 15px; overflow-y: auto; height: calc(100vh - 110px); }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .stat-card { background: white; padding: 20px; border-radius: 12px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .stat-icon { font-size: 28px; margin-bottom: 8px; }
+        .stat-value { font-size: 28px; font-weight: bold; color: #2c5e2e; }
+        .stat-label { font-size: 12px; color: #666; margin-top: 5px; }
+        .collapsible { background: white; border-radius: 12px; margin-bottom: 15px; overflow: hidden; }
+        .collapsible-header { padding: 15px; background: #2c5e2e; color: white; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
+        .collapsible-header i { margin-right: 8px; }
+        .collapsible-content { padding: 15px; display: none; }
+        .collapsible-content.show { display: block; }
+        .chart-container { height: 250px; margin-bottom: 15px; }
+        .delivery-card { background: white; padding: 12px; margin: 8px 0; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .delivery-status { padding: 4px 10px; border-radius: 15px; font-size: 10px; font-weight: bold; }
+        .status-completed { background: #4caf50; color: white; }
+        .status-pending { background: #ff9800; color: white; }
+        .status-transit { background: #2196f3; color: white; }
+        .print-btn { background: #2196f3; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; margin-top: 15px; }
+        .data-table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; }
+        .data-table th, .data-table td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; font-size: 12px; }
+        .data-table th { background: #2c5e2e; color: white; }
+        ::-webkit-scrollbar { width: 4px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div style="width: 30px;"></div>
+        <h1><i class="fas fa-leaf"></i> KTDA Tea Farmers Management</h1>
+        <div style="width: 30px;"></div>
+    </div>
+
+    <!-- Dashboard Page -->
+    <div id="dashboard-page" class="page">
+        <div class="dashboard-content">
+            <div class="stats-grid">
+                <div class="stat-card"><div class="stat-icon"><i class="fas fa-users"></i></div><div class="stat-value" id="total-farmers">0</div><div class="stat-label">Total Farmers</div></div>
+                <div class="stat-card"><div class="stat-icon"><i class="fas fa-industry"></i></div><div class="stat-value" id="total-factories">0</div><div class="stat-label">Tea Factories</div></div>
+                <div class="stat-card"><div class="stat-icon"><i class="fas fa-store"></i></div><div class="stat-value" id="total-centers">0</div><div class="stat-label">Buying Centers</div></div>
+                <div class="stat-card"><div class="stat-icon"><i class="fas fa-map-marker-alt"></i></div><div class="stat-value" id="total-zones">0</div><div class="stat-label">Tea Zones</div></div>
+            </div>
+
+            <div class="collapsible">
+                <div class="collapsible-header" onclick="toggleChart()">
+                    <span><i class="fas fa-chart-pie"></i> Analytics and Charts</span>
+                    <i id="chart-icon" class="fas fa-chevron-down"></i>
+                </div>
+                <div class="collapsible-content" id="chart-content">
+                    <div class="chart-container"><canvas id="farmerChart"></canvas></div>
+                    <div class="chart-container"><canvas id="productionChart"></canvas></div>
+                </div>
+            </div>
+
+            <div class="collapsible">
+                <div class="collapsible-header" onclick="toggleDeliveries()">
+                    <span><i class="fas fa-truck"></i> Recent Tea Deliveries</span>
+                    <i id="delivery-icon" class="fas fa-chevron-down"></i>
+                </div>
+                <div class="collapsible-content" id="delivery-content">
+                    <div class="delivery-list" id="delivery-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Map Page -->
+    <div id="map-page" class="page">
+        <div class="map-page-layout">
+            <div class="map-wrapper">
+                <div id="map"></div>
+                <div class="basemap-control" id="basemapControl">
+                    <button class="basemap-btn" onclick="toggleBasemap()">
+                        <i class="fas fa-map"></i> Basemap <i class="fas fa-chevron-down" style="margin-left: auto;"></i>
+                    </button>
+                    <div class="basemap-dropdown">
+                        <div class="basemap-option" onclick="changeBasemap('street')"><i class="fas fa-road"></i> Street Map</div>
+                        <div class="basemap-option" onclick="changeBasemap('satellite')"><i class="fas fa-satellite"></i> Satellite</div>
+                        <div class="basemap-option" onclick="changeBasemap('terrain')"><i class="fas fa-mountain"></i> Terrain</div>
+                        <div class="basemap-option" onclick="changeBasemap('dark')"><i class="fas fa-moon"></i> Dark Mode</div>
+                        <div class="basemap-option" onclick="changeBasemap('outdoor')"><i class="fas fa-tree"></i> Outdoor</div>
+                    </div>
+                </div>
+                <div class="legend">
+                    <div class="legend-item"><div class="legend-color zone"></div><span><i class="fas fa-map-marker-alt"></i> Tea Zones</span></div>
+                    <div class="legend-item"><div class="legend-color farmer"></div><span><i class="fas fa-user"></i> Farmers</span></div>
+                    <div class="legend-item"><div class="legend-color factory"></div><span><i class="fas fa-industry"></i> Tea Factories</span></div>
+                    <div class="legend-item"><div class="legend-color center"></div><span><i class="fas fa-store"></i> Buying Centers</span></div>
+                </div>
+            </div>
+
+            <div class="data-panel">
+                <div class="collapsible-section">
+                    <div class="section-header" onclick="toggleSection('zones-section')">
+                        <div class="section-title">
+                            <i class="fas fa-map-marker-alt section-icon"></i>
+                            <span>Tea Zones</span>
+                            <span class="section-count" id="zone-count">0</span>
+                        </div>
+                        <i id="zones-section-icon" class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="section-content" id="zones-section">
+                        <input type="text" class="filter-input" id="zone-filter" placeholder="Search tea zones..." onkeyup="filterZones()">
+                        <div class="filter-buttons">
+                            <button class="filter-btn" onclick="clearZoneFilter()">Clear</button>
+                        </div>
+                        <div class="item-list" id="zones-list"></div>
+                    </div>
+                </div>
+
+                <div class="collapsible-section">
+                    <div class="section-header" onclick="toggleSection('farmers-section')">
+                        <div class="section-title">
+                            <i class="fas fa-user section-icon"></i>
+                            <span>Farmers</span>
+                            <span class="section-count" id="farmer-count">0</span>
+                        </div>
+                        <i id="farmers-section-icon" class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="section-content" id="farmers-section">
+                        <input type="text" class="filter-input" id="farmer-filter" placeholder="Search farmers..." onkeyup="filterFarmers()">
+                        <div class="filter-buttons">
+                            <button class="filter-btn" onclick="clearFarmerFilter()">Clear</button>
+                        </div>
+                        <div class="item-list" id="farmers-list"></div>
+                    </div>
+                </div>
+
+                <div class="collapsible-section">
+                    <div class="section-header" onclick="toggleSection('factories-section')">
+                        <div class="section-title">
+                            <i class="fas fa-industry section-icon"></i>
+                            <span>Tea Factories</span>
+                            <span class="section-count" id="factory-count">0</span>
+                        </div>
+                        <i id="factories-section-icon" class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="section-content" id="factories-section">
+                        <input type="text" class="filter-input" id="factory-filter" placeholder="Search factories..." onkeyup="filterFactories()">
+                        <div class="filter-buttons">
+                            <button class="filter-btn" onclick="clearFactoryFilter()">Clear</button>
+                        </div>
+                        <div class="item-list" id="factories-list"></div>
+                    </div>
+                </div>
+
+                <div class="collapsible-section">
+                    <div class="section-header" onclick="toggleSection('centers-section')">
+                        <div class="section-title">
+                            <i class="fas fa-store section-icon"></i>
+                            <span>Buying Centers</span>
+                            <span class="section-count" id="center-count">0</span>
+                        </div>
+                        <i id="centers-section-icon" class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="section-content" id="centers-section">
+                        <input type="text" class="filter-input" id="center-filter" placeholder="Search buying centers..." onkeyup="filterCenters()">
+                        <div class="filter-buttons">
+                            <button class="filter-btn" onclick="clearCenterFilter()">Clear</button>
+                        </div>
+                        <div class="item-list" id="centers-list"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Farmers Page -->
+    <div id="farmers-page" class="page">
+        <div class="dashboard-content">
+            <h2 style="margin-bottom: 15px; color: #2c5e2e;"><i class="fas fa-users"></i> Registered Farmers</h2>
+            <div style="overflow-x: auto;">
+                <table class="data-table" id="farmers-table">
+                    <thead><tr><th>Farmer ID</th><th>Name</th><th>Phone</th><th>Acreage</th><th>Tea Zone</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delivery Page -->
+    <div id="delivery-page" class="page">
+        <div class="dashboard-content">
+            <h2 style="margin-bottom: 15px; color: #2c5e2e;"><i class="fas fa-truck"></i> Record Tea Delivery</h2>
+            <div style="background: white; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: bold;"><i class="fas fa-user"></i> Select Farmer</label>
+                    <select id="delivery-farmer" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd;"></select>
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: bold;"><i class="fas fa-weight-hanging"></i> Weight (kg)</label>
+                    <input type="number" id="delivery-weight" placeholder="Enter weight in kilograms" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: bold;"><i class="fas fa-star"></i> Leaf Grade</label>
+                    <select id="delivery-grade" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
+                        <option value="A">Grade A - Premium</option>
+                        <option value="B">Grade B - Standard</option>
+                        <option value="C">Grade C - Lower</option>
+                    </select>
+                </div>
+                <button onclick="recordDelivery()" style="width: 100%; padding: 12px; background: #2c5e2e; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;"><i class="fas fa-save"></i> Record Delivery</button>
+            </div>
+            <h3 style="margin-bottom: 10px;"><i class="fas fa-history"></i> Recent Deliveries</h3>
+            <div class="delivery-list" id="recent-deliveries"></div>
+        </div>
+    </div>
+
+    <!-- Reports Page -->
+    <div id="reports-page" class="page">
+        <div class="dashboard-content">
+            <h2 style="margin-bottom: 15px; color: #2c5e2e;"><i class="fas fa-chart-line"></i> Reports and Analytics</h2>
+            <div style="background: white; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+                <h3><i class="fas fa-chart-bar"></i> Production Summary</h3>
+                <div id="report-content"></div>
+                <button class="print-btn" onclick="printReport()"><i class="fas fa-print"></i> Print or Save as PDF</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <div class="tabs">
+        <div class="tab active" onclick="showPage('dashboard')"><i class="fas fa-chart-pie"></i><span>Dashboard</span></div>
+        <div class="tab" onclick="showPage('map')"><i class="fas fa-map"></i><span>Map</span></div>
+        <div class="tab" onclick="showPage('farmers')"><i class="fas fa-users"></i><span>Farmers</span></div>
+        <div class="tab" onclick="showPage('delivery')"><i class="fas fa-truck"></i><span>Delivery</span></div>
+        <div class="tab" onclick="showPage('reports')"><i class="fas fa-chart-line"></i><span>Reports</span></div>
+    </div>
+
+    <script>
+        let factories = [];
+        let farmers = [];
+        let centers = [];
+        let zones = [];
+        let deliveries = [];
+        let map, currentBasemap;
+        let farmerChart, productionChart;
+        
+        let zoneLayers = [];
+        let farmerMarkers = [];
+        let factoryMarkers = [];
+        let centerMarkers = [];
+
+        const sampleData = {
+            factories: [
+                { id: 1, name: "Rukuriri Tea Factory", region: "Meru", capacity: 120000, lat: 0.2345, lng: 37.5678 },
+                { id: 2, name: "Mungania Tea Factory", region: "Embu", capacity: 95000, lat: -0.4567, lng: 37.7890 },
+                { id: 3, name: "Kagwe Tea Factory", region: "Kiambu", capacity: 85000, lat: -1.1234, lng: 36.8901 }
+            ],
+            zones: [
+                { id: 1, name: "Rukuriri North Zone", factory_id: 1, acres: 8500, farmers: 4, lat: 0.23, lng: 37.55 },
+                { id: 2, name: "Rukuriri South Zone", factory_id: 1, acres: 7200, farmers: 1, lat: 0.21, lng: 37.53 },
+                { id: 3, name: "Mungania East Zone", factory_id: 2, acres: 9200, farmers: 2, lat: -0.45, lng: 37.78 }
+            ],
+            farmers: [
+                { id: 1, number: "KTF001234", first_name: "James", last_name: "Mwangi", phone: "0712345678", acres: 2.5, zone_id: 1, lat: 0.23, lng: 37.55 },
+                { id: 2, number: "KTF001235", first_name: "Mary", last_name: "Wanjiku", phone: "0723456789", acres: 3.2, zone_id: 1, lat: 0.235, lng: 37.552 },
+                { id: 3, number: "KTF001236", first_name: "Peter", last_name: "Njoroge", phone: "0734567890", acres: 1.8, zone_id: 1, lat: 0.24, lng: 37.548 },
+                { id: 4, number: "KTF001237", first_name: "Grace", last_name: "Wambui", phone: "0745678901", acres: 4.0, zone_id: 1, lat: 0.245, lng: 37.545 },
+                { id: 5, number: "KTF001238", first_name: "John", last_name: "Kamau", phone: "0756789012", acres: 3.5, zone_id: 3, lat: -0.45, lng: 37.78 },
+                { id: 6, number: "KTF001239", first_name: "Esther", last_name: "Nyokabi", phone: "0767890123", acres: 2.2, zone_id: 2, lat: -0.455, lng: 37.785 },
+                { id: 7, number: "KTF001240", first_name: "David", last_name: "Omondi", phone: "0778901234", acres: 5.0, zone_id: 3, lat: -0.46, lng: 37.775 },
+                { id: 8, number: "KTF001241", first_name: "Sarah", last_name: "Akinyi", phone: "0789012345", acres: 2.8, zone_id: 3, lat: -0.465, lng: 37.77 }
+            ],
+            centers: [
+                { id: 1, name: "Kianjai Center", factory_id: 1, capacity: 8000, has_weighbridge: true, lat: 0.245, lng: 37.56 },
+                { id: 2, name: "Ntharene Center", factory_id: 1, capacity: 6500, has_weighbridge: false, lat: 0.235, lng: 37.55 },
+                { id: 3, name: "Mutuati Center", factory_id: 1, capacity: 7000, has_weighbridge: false, lat: 0.225, lng: 37.54 },
+                { id: 4, name: "Kianyaga Center", factory_id: 2, capacity: 7500, has_weighbridge: true, lat: -0.446, lng: 37.79 },
+                { id: 5, name: "Gachoka Center", factory_id: 2, capacity: 5500, has_weighbridge: false, lat: -0.466, lng: 37.78 }
+            ],
+            deliveries: [
+                { id: 1, farmer_id: 1, weight: 450, grade: "A", date: "2026-04-07", status: "completed" },
+                { id: 2, farmer_id: 2, weight: 380, grade: "A", date: "2026-04-06", status: "completed" },
+                { id: 3, farmer_id: 5, weight: 620, grade: "A", date: "2026-04-05", status: "completed" },
+                { id: 4, farmer_id: 8, weight: 290, grade: "B", date: "2026-04-04", status: "pending" },
+                { id: 5, farmer_id: 7, weight: 510, grade: "A", date: "2026-04-03", status: "transit" }
+            ]
+        };
+
+        function initData() {
+            factories = sampleData.factories;
+            farmers = sampleData.farmers;
+            centers = sampleData.centers;
+            zones = sampleData.zones;
+            deliveries = sampleData.deliveries;
+            updateUI();
+            if (map) updateMapLayers();
+        }
+
+        function updateUI() {
+            document.getElementById('total-farmers').textContent = farmers.length;
+            document.getElementById('total-factories').textContent = factories.length;
+            document.getElementById('total-centers').textContent = centers.length;
+            document.getElementById('total-zones').textContent = zones.length;
+            
+            document.getElementById('zone-count').textContent = zones.length;
+            document.getElementById('farmer-count').textContent = farmers.length;
+            document.getElementById('factory-count').textContent = factories.length;
+            document.getElementById('center-count').textContent = centers.length;
+            
+            renderZonesList(zones);
+            renderFarmersList(farmers);
+            renderFactoriesList(factories);
+            renderCentersList(centers);
+            
+            const farmersTable = document.querySelector('#farmers-table tbody');
+            farmersTable.innerHTML = farmers.map(farmer => `
+                <tr>
+                    <td>${farmer.number}</td>
+                    <td>${farmer.first_name} ${farmer.last_name}</td>
+                    <td>${farmer.phone}</td>
+                    <td>${farmer.acres} acres</td>
+                    <td>${getZoneName(farmer.zone_id)}</td>
+                </tr>
+            `).join('');
+            
+            const deliverySelect = document.getElementById('delivery-farmer');
+            deliverySelect.innerHTML = '<option value="">-- Select Farmer --</option>' + 
+                farmers.map(f => `<option value="${f.id}">${f.first_name} ${f.last_name} (${f.number})</option>`).join('');
+            
+            const recentDeliveries = document.getElementById('recent-deliveries');
+            recentDeliveries.innerHTML = deliveries.map(d => {
+                const farmer = farmers.find(f => f.id === d.farmer_id);
+                const statusClass = d.status === 'completed' ? 'status-completed' : (d.status === 'pending' ? 'status-pending' : 'status-transit');
+                const statusText = d.status === 'completed' ? 'Completed' : (d.status === 'pending' ? 'Pending' : 'In Transit');
+                return `<div class="delivery-card"><div><strong>${farmer ? farmer.first_name + ' ' + farmer.last_name : 'Unknown'}</strong><br>${d.weight} kg - Grade ${d.grade}<br><small>${d.date}</small></div><span class="delivery-status ${statusClass}">${statusText}</span></div>`;
+            }).join('');
+            
+            const totalWeight = deliveries.reduce((sum, d) => sum + d.weight, 0);
+            const avgWeight = totalWeight / deliveries.length;
+            const topFarmer = getTopFarmer();
+            document.getElementById('report-content').innerHTML = `
+                <p><strong><i class="fas fa-chart-line"></i> Weekly Production Summary</strong></p>
+                <p>Total tea leaves collected: <strong>${totalWeight.toLocaleString()} kg</strong></p>
+                <p>Average per delivery: <strong>${Math.round(avgWeight)} kg</strong></p>
+                <p>Top performer: <strong>${topFarmer}</strong></p>
+                <hr><p><strong><i class="fas fa-money-bill-wave"></i> Payment Summary</strong></p>
+                <p>Total payments: <strong>KES ${(totalWeight * 65).toLocaleString()}</strong></p>
+                <p>Pending payments: <strong>KES ${(totalWeight * 65 * 0.15).toLocaleString()}</strong></p>
+                <hr><p><strong><i class="fas fa-truck"></i> Delivery Efficiency</strong></p>
+                <p>On-time deliveries: <strong>${Math.round((deliveries.filter(d => d.status === 'completed').length / deliveries.length) * 100)}%</strong></p>
+                <p>Total deliveries: <strong>${deliveries.length}</strong></p>
+            `;
+            updateCharts();
+        }
+
+        function renderZonesList(items) {
+            const container = document.getElementById('zones-list');
+            container.innerHTML = items.map(zone => `<div class="item-card" onclick="zoomToZone(${zone.id})"><div class="item-name"><i class="fas fa-map-marker-alt"></i> ${zone.name}</div><div class="item-detail">${zone.acres.toLocaleString()} acres</div></div>`).join('');
+        }
+
+        function renderFarmersList(items) {
+            const container = document.getElementById('farmers-list');
+            container.innerHTML = items.map(farmer => `<div class="item-card" onclick="zoomToFarmer(${farmer.id})"><div class="item-name"><i class="fas fa-user"></i> ${farmer.first_name} ${farmer.last_name}</div><div class="item-detail">${farmer.number} | ${farmer.acres} acres</div></div>`).join('');
+        }
+
+        function renderFactoriesList(items) {
+            const container = document.getElementById('factories-list');
+            container.innerHTML = items.map(factory => `<div class="item-card" onclick="zoomToFactory(${factory.id})"><div class="item-name"><i class="fas fa-industry"></i> ${factory.name}</div><div class="item-detail">${factory.region} | ${factory.capacity.toLocaleString()} kg/day</div></div>`).join('');
+        }
+
+        function renderCentersList(items) {
+            const container = document.getElementById('centers-list');
+            container.innerHTML = items.map(center => `<div class="item-card" onclick="zoomToCenter(${center.id})"><div class="item-name"><i class="fas fa-store"></i> ${center.name}</div><div class="item-detail">Weighbridge: ${center.has_weighbridge ? 'Yes' : 'No'}</div></div>`).join('');
+        }
+
+        function filterZones() {
+            const searchTerm = document.getElementById('zone-filter').value.toLowerCase();
+            renderZonesList(zones.filter(zone => zone.name.toLowerCase().includes(searchTerm)));
+        }
+
+        function filterFarmers() {
+            const searchTerm = document.getElementById('farmer-filter').value.toLowerCase();
+            renderFarmersList(farmers.filter(farmer => farmer.first_name.toLowerCase().includes(searchTerm) || farmer.last_name.toLowerCase().includes(searchTerm) || farmer.number.toLowerCase().includes(searchTerm)));
+        }
+
+        function filterFactories() {
+            const searchTerm = document.getElementById('factory-filter').value.toLowerCase();
+            renderFactoriesList(factories.filter(factory => factory.name.toLowerCase().includes(searchTerm) || factory.region.toLowerCase().includes(searchTerm)));
+        }
+
+        function filterCenters() {
+            const searchTerm = document.getElementById('center-filter').value.toLowerCase();
+            renderCentersList(centers.filter(center => center.name.toLowerCase().includes(searchTerm)));
+        }
+
+        function clearZoneFilter() { document.getElementById('zone-filter').value = ''; filterZones(); }
+        function clearFarmerFilter() { document.getElementById('farmer-filter').value = ''; filterFarmers(); }
+        function clearFactoryFilter() { document.getElementById('factory-filter').value = ''; filterFactories(); }
+        function clearCenterFilter() { document.getElementById('center-filter').value = ''; filterCenters(); }
+
+        function updateMapLayers() {
+            if (!map) return;
+            
+            zoneLayers.forEach(layer => map.removeLayer(layer));
+            farmerMarkers.forEach(marker => map.removeLayer(marker));
+            factoryMarkers.forEach(marker => map.removeLayer(marker));
+            centerMarkers.forEach(marker => map.removeLayer(marker));
+            zoneLayers = []; farmerMarkers = []; factoryMarkers = []; centerMarkers = [];
+            
+            zones.forEach(zone => {
+                const zoneCoords = getZoneCoords(zone.id);
+                if (zoneCoords) {
+                    const polygon = L.polygon(zoneCoords, { color: '#2c5e2e', weight: 2, fillColor: '#2c5e2e', fillOpacity: 0.1 }).addTo(map);
+                    polygon.bindPopup(`<b><i class="fas fa-map-marker-alt"></i> ${zone.name}</b><br>${zone.acres.toLocaleString()} acres`);
+                    polygon.on('click', () => zoomToZone(zone.id));
+                    zoneLayers.push(polygon);
+                }
+            });
+            
+            farmers.forEach(farmer => {
+                const marker = L.marker([farmer.lat, farmer.lng], { icon: L.divIcon({ html: '<div style="background:#27ae60; width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:2px solid white; font-size:12px;"><i class="fas fa-user"></i></div>', iconSize: [24, 24] }) }).addTo(map);
+                marker.bindPopup(`<b><i class="fas fa-user"></i> ${farmer.first_name} ${farmer.last_name}</b><br>ID: ${farmer.number}<br>${farmer.acres} acres`);
+                marker.on('click', () => zoomToFarmer(farmer.id));
+                farmerMarkers.push(marker);
+            });
+            
+            factories.forEach(factory => {
+                const marker = L.marker([factory.lat, factory.lng], { icon: L.divIcon({ html: '<div style="background:#e74c3c; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:2px solid white; font-size:14px;"><i class="fas fa-industry"></i></div>', iconSize: [28, 28] }) }).addTo(map);
+                marker.bindPopup(`<b><i class="fas fa-industry"></i> ${factory.name}</b><br>Region: ${factory.region}<br>Capacity: ${factory.capacity.toLocaleString()} kg/day`);
+                marker.on('click', () => zoomToFactory(factory.id));
+                factoryMarkers.push(marker);
+            });
+            
+            centers.forEach(center => {
+                const marker = L.marker([center.lat, center.lng], { icon: L.divIcon({ html: '<div style="background:#f39c12; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:2px solid white; font-size:12px;"><i class="fas fa-store"></i></div>', iconSize: [26, 26] }) }).addTo(map);
+                marker.bindPopup(`<b><i class="fas fa-store"></i> ${center.name}</b><br>Weighbridge: ${center.has_weighbridge ? 'Yes' : 'No'}<br>Capacity: ${center.capacity.toLocaleString()} kg/day`);
+                marker.on('click', () => zoomToCenter(center.id));
+                centerMarkers.push(marker);
+            });
+        }
+
+        function getZoneName(zoneId) { const zone = zones.find(z => z.id === zoneId); return zone ? zone.name : 'Not Assigned'; }
+        function getTopFarmer() { const farmerTotals = {}; deliveries.forEach(d => { farmerTotals[d.farmer_id] = (farmerTotals[d.farmer_id] || 0) + d.weight; }); let topId = null, topWeight = 0; for (const [id, weight] of Object.entries(farmerTotals)) { if (weight > topWeight) { topWeight = weight; topId = parseInt(id); } } const farmer = farmers.find(f => f.id === topId); return farmer ? `${farmer.first_name} ${farmer.last_name} (${topWeight} kg)` : 'N/A'; }
+        function updateCharts() { const zoneLabels = zones.map(z => z.name.split(' ').slice(0,2).join(' ')); const zoneFarmers = zones.map(z => farmers.filter(f => f.zone_id === z.id).length); if (farmerChart) farmerChart.destroy(); farmerChart = new Chart(document.getElementById('farmerChart'), { type: 'doughnut', data: { labels: zoneLabels, datasets: [{ data: zoneFarmers, backgroundColor: ['#4CAF50', '#FF9800', '#2196F3'] }] }, options: { responsive: true } }); const weeks = ['Week 1', 'Week 2', 'Week 3', 'Week 4']; const productionData = [1250, 1480, 1620, 1890]; if (productionChart) productionChart.destroy(); productionChart = new Chart(document.getElementById('productionChart'), { type: 'bar', data: { labels: weeks, datasets: [{ label: 'Tea Production (kg)', data: productionData, backgroundColor: '#4CAF50', borderRadius: 8 }] }, options: { responsive: true, scales: { y: { beginAtZero: true } } } }); }
+        function recordDelivery() { const farmerId = document.getElementById('delivery-farmer').value; const weight = document.getElementById('delivery-weight').value; const grade = document.getElementById('delivery-grade').value; if (!farmerId || !weight) { alert('Please select a farmer and enter weight'); return; } const newDelivery = { id: deliveries.length + 1, farmer_id: parseInt(farmerId), weight: parseFloat(weight), grade: grade, date: new Date().toISOString().split('T')[0], status: 'pending' }; deliveries.unshift(newDelivery); updateUI(); document.getElementById('delivery-weight').value = ''; alert('Delivery recorded successfully'); }
+        function printReport() { window.print(); }
+        
+        function initMap() {
+            if (map) return;
+            map = L.map('map').setView([0.2, 37.0], 7);
+            setBasemap('street');
+            updateMapLayers();
+        }
+        
+        function getZoneCoords(zoneId) { 
+            const coords = { 
+                1: [[0.22,37.53],[0.24,37.55],[0.23,37.57],[0.21,37.55],[0.22,37.53]], 
+                2: [[0.20,37.51],[0.22,37.53],[0.21,37.55],[0.19,37.53],[0.20,37.51]], 
+                3: [[-0.47,37.76],[-0.45,37.78],[-0.46,37.80],[-0.48,37.78],[-0.47,37.76]] 
+            }; 
+            return coords[zoneId]; 
+        }
+        
+        function setBasemap(type) { 
+            if (!map) return;
+            const basemaps = { 
+                street: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', 
+                satellite: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', 
+                terrain: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', 
+                dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', 
+                outdoor: 'https://{s}.tile.thunderforest.com/outdoors/{z}/{x}/{y}.png' 
+            }; 
+            if (currentBasemap) map.removeLayer(currentBasemap); 
+            currentBasemap = L.tileLayer(basemaps[type], { attribution: 'OpenStreetMap' }).addTo(map); 
+        }
+        
+        function changeBasemap(type) { setBasemap(type); document.getElementById('basemapControl').classList.remove('active'); }
+        function toggleBasemap() { document.getElementById('basemapControl').classList.toggle('active'); }
+        function zoomToZone(zoneId) { const zone = zones.find(z => z.id === zoneId); if (zone && map) { map.setView([zone.lat, zone.lng], 10); showPage('map'); } }
+        function zoomToFarmer(farmerId) { const farmer = farmers.find(f => f.id === farmerId); if (farmer && map) { map.setView([farmer.lat, farmer.lng], 14); showPage('map'); } }
+        function zoomToFactory(factoryId) { const factory = factories.find(f => f.id === factoryId); if (factory && map) { map.setView([factory.lat, factory.lng], 12); showPage('map'); } }
+        function zoomToCenter(centerId) { const center = centers.find(c => c.id === centerId); if (center && map) { map.setView([center.lat, center.lng], 15); showPage('map'); } }
+        
+        function toggleSection(sectionId) { 
+            const content = document.getElementById(sectionId); 
+            const icon = document.getElementById(sectionId + '-icon'); 
+            content.classList.toggle('show'); 
+            icon.classList.toggle('fa-chevron-down');
+            icon.classList.toggle('fa-chevron-up');
+        }
+        
+        function toggleChart() { 
+            const content = document.getElementById('chart-content'); 
+            const icon = document.getElementById('chart-icon'); 
+            content.classList.toggle('show'); 
+            icon.classList.toggle('fa-chevron-down');
+            icon.classList.toggle('fa-chevron-up');
+        }
+        
+        function toggleDeliveries() { 
+            const content = document.getElementById('delivery-content'); 
+            const icon = document.getElementById('delivery-icon'); 
+            content.classList.toggle('show'); 
+            icon.classList.toggle('fa-chevron-down');
+            icon.classList.toggle('fa-chevron-up');
+        }
+        
+        function showPage(pageName) { 
+            document.querySelectorAll('.page').forEach(page => page.classList.remove('active')); 
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active')); 
+            document.getElementById(`${pageName}-page`).classList.add('active'); 
+            event.target.closest('.tab').classList.add('active'); 
+            if (pageName === 'map' && map) setTimeout(() => map.invalidateSize(), 100); 
+        }
+        
+        document.addEventListener('click', function(event) { 
+            const basemapControl = document.getElementById('basemapControl'); 
+            if (basemapControl && !basemapControl.contains(event.target)) basemapControl.classList.remove('active'); 
+        });
+        
+        window.addEventListener('load', function() {
+            initData();
+            initMap();
+        });
+    </script>
+</body>
+</html>
