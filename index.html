@@ -80,7 +80,23 @@
         .legend-color { width: 14px; height: 14px; display: inline-block; margin-right: 5px; border-radius: 3px; }
         button.delivery-submit { background: #2c5e2e; color: white; border: none; padding: 10px; border-radius: 8px; width: 100%; margin-top: 10px; cursor: pointer; }
         .print-btn { background: #2196f3; color: white; border: none; padding: 8px 16px; border-radius: 6px; margin-top: 10px; cursor: pointer; }
-        @media (max-width: 768px) { .page { padding: 10px; } }
+        .collapsible-header {
+            background: #2c5e2e;
+            color: white;
+            padding: 12px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        .collapsible-content { display: none; }
+        .collapsible-content.show { display: block; }
+        .chart-row { display: flex; flex-wrap: wrap; gap: 15px; margin-top: 10px; }
+        .chart-box { flex: 1; min-width: 200px; background: white; border-radius: 12px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .chart-box canvas { max-height: 200px; width: 100%; }
+        @media (max-width: 768px) { .page { padding: 10px; } .chart-box { min-width: 100%; } }
     </style>
 </head>
 <body>
@@ -106,13 +122,15 @@
 
     <script>
         // ======================= CONFIGURATION =======================
-        let API_BASE = localStorage.getItem('api_base') || '';   // optional backend URL (ngrok)
+        let API_BASE = localStorage.getItem('api_base') || '';
         const USERS = {
             admin: { password: 'admin123', role: 'admin', name: 'Administrator' },
             clerk1: { password: 'clerk123', role: 'clerk', name: 'Field Clerk Officer' }
         };
         let currentRole = null;
         let map = null;
+        let carbonPieChart = null;
+        let carbonTierCharts = {};
 
         // ======================= LOGIN / LOGOUT =======================
         window.doLogin = function() {
@@ -246,6 +264,46 @@
             }
         };
 
+        // ======================= CARBON CHARTS (collapsible) =======================
+        function initCarbonCharts() {
+            const pieCtx = document.getElementById('carbonPieChart')?.getContext('2d');
+            if (pieCtx && !carbonPieChart) {
+                carbonPieChart = new Chart(pieCtx, {
+                    type: 'pie',
+                    data: {
+                        labels: ['Hydropower Avoided', 'Tea SOC Removals', 'Tree ARR Removals'],
+                        datasets: [{ data: [25000, 45000, 18000], backgroundColor: ['#e74c3c', '#4CAF50', '#2196F3'] }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'bottom' } } }
+                });
+            }
+            // Tier bar charts
+            const tier1Ctx = document.getElementById('tier1Chart')?.getContext('2d');
+            if (tier1Ctx && !carbonTierCharts.tier1) {
+                carbonTierCharts.tier1 = new Chart(tier1Ctx, {
+                    type: 'bar',
+                    data: { labels: ['Hydropower'], datasets: [{ label: 'tCO₂e', data: [25000], backgroundColor: '#e74c3c' }] },
+                    options: { responsive: true, maintainAspectRatio: true, scales: { y: { beginAtZero: true } } }
+                });
+            }
+            const tier2Ctx = document.getElementById('tier2Chart')?.getContext('2d');
+            if (tier2Ctx && !carbonTierCharts.tier2) {
+                carbonTierCharts.tier2 = new Chart(tier2Ctx, {
+                    type: 'bar',
+                    data: { labels: ['Tea SOC'], datasets: [{ label: 'tCO₂e', data: [45000], backgroundColor: '#4CAF50' }] },
+                    options: { responsive: true, maintainAspectRatio: true, scales: { y: { beginAtZero: true } } }
+                });
+            }
+            const tier3Ctx = document.getElementById('tier3Chart')?.getContext('2d');
+            if (tier3Ctx && !carbonTierCharts.tier3) {
+                carbonTierCharts.tier3 = new Chart(tier3Ctx, {
+                    type: 'bar',
+                    data: { labels: ['Tree ARR'], datasets: [{ label: 'tCO₂e', data: [18000], backgroundColor: '#2196F3' }] },
+                    options: { responsive: true, maintainAspectRatio: true, scales: { y: { beginAtZero: true } } }
+                });
+            }
+        }
+
         // ======================= UI BUILDER (role‑based) =======================
         function buildUI() {
             const tabsContainer = document.getElementById('tabsContainer');
@@ -288,22 +346,35 @@
             if (currentRole === 'admin') {
                 document.getElementById('page-map').innerHTML = `<div class="map-container" id="admin-map-container"><div id="admin-map" style="height:100%;"></div></div><div class="legend"><div><span class="legend-color" style="background:#e74c3c;"></span> Hydropower</div><div><span class="legend-color" style="background:#4CAF50;"></span> Tea Zones</div></div>`;
                 setTimeout(() => { map = initMap('admin-map'); }, 100);
-                document.getElementById('page-farmers').innerHTML = `<h2>Registered Farmers</h2><div class="card"><table><th>ID</th><th>Name</th><th>Phone</th><th>Acreage</th><th>Zone</th></tr><tr><td>KTF001234</td><td>James Mwangi</td><td>0712345678</td><td>2.5</td><td>Rukuriri North</td></tr><tr><td>KTF001235</td><td>Mary Wanjiku</td><td>0723456789</td><td>3.2</td><td>Rukuriri North</td></tr></table></div>`;
+                document.getElementById('page-farmers').innerHTML = `<h2>Registered Farmers</h2><div class="card"><table><th>ID</th><th>Name</th><th>Phone</th><th>Acreage</th><th>Zone</th><tr><td>KTF001234</td><td>James Mwangi</td><td>0712345678</td><td>2.5</td><td>Rukuriri North</td></tr><tr><td>KTF001235</td><td>Mary Wanjiku</td><td>0723456789</td><td>3.2</td><td>Rukuriri North</td></tr></table></div>`;
                 document.getElementById('page-farms').innerHTML = `<h2>Tea Estates & Carbon Stocks</h2><div class="card"><h3>Rukuriri Estate</h3><p>2,500 ha | Soil Carbon: 45,000 tCO₂e</p></div><div class="card"><h3>Mungania Estate</h3><p>3,200 ha | Soil Carbon: 58,000 tCO₂e</p></div>`;
-                document.getElementById('page-dashboard').innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;"><div class="card"><div class="stat-number">88,000</div><div>tCO₂e/year</div></div><div class="card"><div class="stat-number">$1.43M</div><div>Annual Value</div></div></div><div class="map-container" style="height:250px;"><div id="carbon-map" style="height:100%;"></div></div><div class="card"><canvas id="carbonChart" width="400" height="200"></canvas></div>`;
+                document.getElementById('page-dashboard').innerHTML = `
+                    <div class="collapsible-header" onclick="toggleDashboard()">
+                        <span><i class="fas fa-chart-pie"></i> Carbon Analytics</span>
+                        <span id="dashboardToggleIcon">▼</span>
+                    </div>
+                    <div id="dashboardContent" class="collapsible-content show">
+                        <div class="chart-row">
+                            <div class="chart-box">
+                                <canvas id="carbonPieChart" width="300" height="200"></canvas>
+                            </div>
+                            <div class="chart-box">
+                                <h4>Hydropower (Avoided)</h4>
+                                <canvas id="tier1Chart" width="300" height="150"></canvas>
+                            </div>
+                            <div class="chart-box">
+                                <h4>Tea SOC (Removals)</h4>
+                                <canvas id="tier2Chart" width="300" height="150"></canvas>
+                            </div>
+                            <div class="chart-box">
+                                <h4>Tree ARR (Removals)</h4>
+                                <canvas id="tier3Chart" width="300" height="150"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                `;
                 document.getElementById('page-reports').innerHTML = `<h2>Carbon Credit Reports</h2><div id="reportContent"><div class="card"><strong>Credits Issued:</strong> 88,000 tCO₂e</div><div class="card"><strong>Revenue:</strong> $1,426,500</div><div class="card"><strong>Buyers:</strong> Microsoft, Swiss Re</div></div><button class="print-btn" onclick="printReport()"><i class="fas fa-print"></i> Print / PDF</button>`;
-                setTimeout(() => {
-                    if (document.getElementById('carbon-map') && !window.carbonMap) {
-                        window.carbonMap = L.map('carbon-map').setView([0.5,36.5],7);
-                        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(window.carbonMap);
-                        L.marker([0.2345,37.5678]).addTo(window.carbonMap).bindPopup('Hydro');
-                        L.circle([0.23,37.55], {radius:5000, color:'#4CAF50', fillOpacity:0.2}).addTo(window.carbonMap).bindPopup('Tea SOC Pilot');
-                    }
-                    const ctx = document.getElementById('carbonChart')?.getContext('2d');
-                    if (ctx && !window.carbonChart) {
-                        window.carbonChart = new Chart(ctx, { type: 'pie', data: { labels: ['Hydropower', 'Tea SOC', 'Tree ARR'], datasets: [{ data: [25000,45000,18000], backgroundColor: ['#e74c3c','#4CAF50','#2196F3'] }] } });
-                    }
-                }, 150);
+                setTimeout(() => initCarbonCharts(), 150);
             } else {
                 document.getElementById('page-farmers').innerHTML = `<h2>Assigned Farmers</h2><div class="card"><strong>James Mwangi</strong> – 2.5 acres</div><div class="card"><strong>Mary Wanjiku</strong> – 3.2 acres</div><div class="card"><strong>John Kamau</strong> – 3.5 acres</div>`;
                 document.getElementById('page-delivery').innerHTML = `
@@ -323,6 +394,13 @@
                 setTimeout(() => { map = initMap('clerk-map'); }, 100);
                 refreshDeliveries();
             }
+        }
+
+        function toggleDashboard() {
+            const content = document.getElementById('dashboardContent');
+            const icon = document.getElementById('dashboardToggleIcon');
+            content.classList.toggle('show');
+            icon.innerHTML = content.classList.contains('show') ? '▼' : '▶';
         }
 
         function showPage(pageId) {
