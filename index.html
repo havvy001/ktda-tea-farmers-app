@@ -84,7 +84,6 @@
     </style>
 </head>
 <body>
-    <!-- Login Overlay -->
     <div id="loginOverlay" class="login-overlay">
         <div class="login-card">
             <h2>🌍 KTDA GIS</h2>
@@ -92,7 +91,7 @@
             <input type="password" id="password" placeholder="Password">
             <button onclick="doLogin()">Login</button>
             <div id="loginError" class="error-msg"></div>
-            <div style="margin-top: 15px; font-size: 12px;">Demo:<br>Admin: admin / admin123<br>Field Clerk: clerk1 / clerk123</div>
+            <div style="margin-top:15px;font-size:12px;">Demo:<br>Admin: admin / admin123<br>Field Clerk: clerk1 / clerk123</div>
         </div>
     </div>
 
@@ -106,12 +105,13 @@
     </div>
 
     <script>
+        const API_BASE = 'https://those-immersion-frustrate.ngrok-free.dev';  // will be replaced
         const users = {
             admin: { password: 'admin123', role: 'admin', name: 'Admin' },
             clerk1: { password: 'clerk123', role: 'clerk', name: 'Field Clerk Officer' }
         };
         let currentRole = null;
-        let map = null; // shared map instance
+        let map = null;
         let carbonMap = null;
 
         function doLogin() {
@@ -144,12 +144,10 @@
             L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
                 attribution: '© OpenStreetMap, CartoDB'
             }).addTo(newMap);
-            // markers
             L.marker([0.2345, 37.5678]).addTo(newMap).bindPopup('🏭 Rukuriri Hydro');
             L.marker([-0.4567, 37.7890]).addTo(newMap).bindPopup('🏭 Mungania Hydro');
             L.marker([0.23, 37.55]).addTo(newMap).bindPopup('🌿 Tea Block');
             L.polygon([[0.55,37.4],[0.55,37.5],[0.45,37.5],[0.45,37.4]], {color:'#2c5e2e', fillOpacity:0.1}).addTo(newMap).bindPopup('Mungania East Zone');
-            // basemap selector
             const basemapBtn = L.control({ position: 'topright' });
             basemapBtn.onAdd = function() {
                 const div = L.DomUtil.create('div', 'basemap-selector');
@@ -175,11 +173,11 @@
             L.circle([0.23,37.55], {radius:5000, color:'#4CAF50', fillOpacity:0.2}).addTo(carbonMap).bindPopup('Tea SOC Pilot');
         }
 
-                function submitDelivery() {
+        function submitDelivery() {
             const farmer = document.getElementById('deliveryFarmer')?.value;
             const weight = document.getElementById('deliveryWeight')?.value;
             if (!farmer || !weight) { alert('Select farmer and enter weight'); return; }
-            fetch('/api/ktda/deliveries', {
+            fetch(API_BASE + '/api/ktda/deliveries', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ farmer_name: farmer, green_leaf_kg: parseFloat(weight), leaf_grade: 'A', delivery_date: new Date().toISOString().split('T')[0] })
@@ -196,7 +194,7 @@
         function printReport() {
             const content = document.getElementById('reportContent').innerHTML;
             const win = window.open();
-            win.document.write(`<html><head><title>KTDA Report</title><style>body{font-family:Arial; padding:20px;} table{border-collapse:collapse;} th,td{border:1px solid #ddd;padding:8px;} th{background:#2c5e2e;color:white;}</style></head><body>${content}<p>Generated ${new Date().toLocaleString()}</p></body></html>`);
+            win.document.write(`<html><head><title>KTDA Report</title><style>body{font-family:Arial;padding:20px;}table{border-collapse:collapse;}th,td{border:1px solid #ddd;padding:8px;}th{background:#2c5e2e;color:white;}</style></head><body>${content}<p>Generated ${new Date().toLocaleString()}</p></body></html>`);
             win.document.close();
             win.print();
         }
@@ -226,11 +224,10 @@
                 pageContainer.appendChild(pageDiv);
             });
 
-            // Admin pages
             if (currentRole === 'admin') {
                 document.getElementById('page-map').innerHTML = `<div class="map-container" id="admin-map-container"><div id="admin-map" style="height:100%;"></div></div><div class="legend"><div><span class="legend-color" style="background:#e74c3c;"></span> Hydropower</div><div><span class="legend-color" style="background:#4CAF50;"></span> Tea Zones</div></div>`;
                 setTimeout(() => { if (!map) map = initMap('admin-map'); }, 100);
-                document.getElementById('page-farmers').innerHTML = `<h2>Registered Farmers</h2><div class="card"><table><th>ID</th><th>Name</th><th>Phone</th><th>Acreage</th><th>Zone</th></tr><tr><td>KTF001234</td><td>James Mwangi</td><td>0712345678</td><td>2.5</td><td>Rukuriri North</td></tr><tr><td>KTF001235</td><td>Mary Wanjiku</td><td>0723456789</td><td>3.2</td><td>Rukuriri North</td></tr><tr><td>KTF001238</td><td>John Kamau</td><td>0756789012</td><td>3.5</td><td>Mungania East</td></tr></table></div>`;
+                document.getElementById('page-farmers').innerHTML = `<h2>Registered Farmers</h2><div class="card"><tr><th>ID</th><th>Name</th><th>Phone</th><th>Acreage</th><th>Zone</th></tr><tr><td>KTF001234</td><td>James Mwangi</td><td>0712345678</td><td>2.5</td><td>Rukuriri North</td></tr><tr><td>KTF001235</td><td>Mary Wanjiku</td><td>0723456789</td><td>3.2</td><td>Rukuriri North</td></tr><tr><td>KTF001238</td><td>John Kamau</td><td>0756789012</td><td>3.5</td><td>Mungania East</td></tr></table></div>`;
                 document.getElementById('page-farms').innerHTML = `<h2>Tea Estates & Carbon Stocks</h2><div class="card"><h3>Rukuriri Estate</h3><p>2,500 ha | Soil Carbon: 45,000 tCO₂e</p></div><div class="card"><h3>Mungania Estate</h3><p>3,200 ha | Soil Carbon: 58,000 tCO₂e</p></div>`;
                 document.getElementById('page-dashboard').innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;"><div class="card"><div class="stat-number">88,000</div><div>tCO₂e/year</div></div><div class="card"><div class="stat-number">$1.43M</div><div>Annual Value</div></div></div><div class="map-container" style="height:250px;"><div id="carbon-map" style="height:100%;"></div></div><div class="card"><canvas id="carbonChart" width="400" height="200"></canvas></div>`;
                 document.getElementById('page-reports').innerHTML = `<h2>Carbon Credit Reports</h2><div id="reportContent"><div class="card"><strong>Credits Issued:</strong> 88,000 tCO₂e</div><div class="card"><strong>Revenue:</strong> $1,426,500</div><div class="card"><strong>Buyers:</strong> Microsoft, Swiss Re</div></div><button class="print-btn" onclick="printReport()"><i class="fas fa-print"></i> Print / PDF</button>`;
@@ -240,7 +237,6 @@
                     initCarbonMap();
                 }, 150);
             } else {
-                // Field Clerk
                 document.getElementById('page-farmers').innerHTML = `<h2>Assigned Farmers</h2><div class="card"><strong>James Mwangi</strong> – 2.5 acres</div><div class="card"><strong>Mary Wanjiku</strong> – 3.2 acres</div><div class="card"><strong>John Kamau</strong> – 3.5 acres</div>`;
                 document.getElementById('page-delivery').innerHTML = `<h2>Record Tea Delivery</h2><div class="card"><label>Farmer</label><select id="deliveryFarmer" style="width:100%; padding:8px;"><option>James Mwangi</option><option>Mary Wanjiku</option><option>John Kamau</option></select><label>Weight (kg)</label><input type="number" id="deliveryWeight" style="width:100%; padding:8px; margin-top:5px;"><button class="delivery-submit" onclick="submitDelivery()">Submit Delivery</button></div><div class="card"><strong>Recent Deliveries</strong><br>James Mwangi: 450 kg (Completed)</div>`;
                 document.getElementById('page-map').innerHTML = `<div class="map-container" id="clerk-map-container"><div id="clerk-map" style="height:100%;"></div></div><div class="legend"><div><span class="legend-color" style="background:#e74c3c;"></span> Hydropower</div><div><span class="legend-color" style="background:#4CAF50;"></span> Tea Zones</div></div>`;
@@ -260,4 +256,3 @@
     </script>
 </body>
 </html>
-
