@@ -175,11 +175,21 @@
             L.circle([0.23,37.55], {radius:5000, color:'#4CAF50', fillOpacity:0.2}).addTo(carbonMap).bindPopup('Tea SOC Pilot');
         }
 
-        function submitDelivery() {
+                function submitDelivery() {
             const farmer = document.getElementById('deliveryFarmer')?.value;
             const weight = document.getElementById('deliveryWeight')?.value;
             if (!farmer || !weight) { alert('Select farmer and enter weight'); return; }
-            alert(`Delivery recorded for ${farmer}: ${weight} kg. (Demo)`);
+            fetch('/api/ktda/deliveries', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ farmer_name: farmer, green_leaf_kg: parseFloat(weight), leaf_grade: 'A', delivery_date: new Date().toISOString().split('T')[0] })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) alert('Delivery recorded!');
+                else alert('Error: ' + data.error);
+            })
+            .catch(err => alert('Connection error: ' + err));
             document.getElementById('deliveryWeight').value = '';
         }
 
@@ -250,3 +260,4 @@
     </script>
 </body>
 </html>
+
