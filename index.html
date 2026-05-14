@@ -173,7 +173,26 @@
             L.circle([0.23,37.55], {radius:5000, color:'#4CAF50', fillOpacity:0.2}).addTo(carbonMap).bindPopup('Tea SOC Pilot');
         }
 
-        function submitDelivery() {
+                async function refreshDeliveries() {
+            const farmerName = document.getElementById('deliveryFarmer')?.value;
+            if (!farmerName) return;
+            // Fetch deliveries for the selected farmer (or all)
+            const response = await fetch(API_BASE + '/api/ktda/deliveries?limit=5');
+            const data = await response.json();
+            if (data.success && data.data) {
+                const deliveriesHtml = data.data.map(d => 
+                    <div class="card">
+                        <strong>Farmer ID </strong><br>
+                         kg - <br>
+                        <span class="delivery-status status-completed"> grade</span>
+                    </div>
+                ).join('');
+                const recentDiv = document.querySelector('#page-delivery .card:last-child');
+                if (recentDiv) recentDiv.innerHTML = <strong>Recent Deliveries</strong><br>;
+            }
+        }
+
+        
             const farmer = document.getElementById('deliveryFarmer')?.value;
             const weight = document.getElementById('deliveryWeight')?.value;
             if (!farmer || !weight) { alert('Select farmer and enter weight'); return; }
@@ -207,7 +226,7 @@
 
             let tabs = currentRole === 'admin'
                 ? [{ id: 'map', label: '🗺️ Map', icon: 'map' }, { id: 'farmers', label: '👨‍🌾 Farmers', icon: 'users' }, { id: 'farms', label: '🌾 Farms', icon: 'tractor' }, { id: 'dashboard', label: '📊 Dashboard', icon: 'chart-line' }, { id: 'reports', label: '📈 Reports', icon: 'file-alt' }]
-                : [{ id: 'farmers', label: '👨‍🌾 Farmers', icon: 'users' }, { id: 'delivery', label: '🚚 Record Delivery', icon: 'truck' }, { id: 'map', label: '🗺️ Map', icon: 'map' }];
+                : [{ id: 'farmers', label: '👨‍🌾 Farmers', icon: 'users' }, { id: 'delivery', onFirstShow: () => refreshDeliveries(), label: '🚚 Record Delivery', icon: 'truck' }, { id: 'map', label: '🗺️ Map', icon: 'map' }];
 
             tabs.forEach((tab, idx) => {
                 const btn = document.createElement('div');
@@ -256,3 +275,4 @@
     </script>
 </body>
 </html>
+
