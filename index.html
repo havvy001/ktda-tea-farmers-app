@@ -88,7 +88,7 @@
         <div class="login-card">
             <h2>🌍 KTDA GIS</h2>
             <input type="text" id="username" placeholder="Username" autocomplete="off">
-            <input type="password" id="password" placeholder="Password">
+            <input type="password" id="password" placeholder="Password" autocomplete="off">
             <button onclick="doLogin()">Login</button>
             <div id="loginError" class="error-msg"></div>
             <div style="margin-top:15px;font-size:12px;">Demo:<br>Admin: admin / admin123<br>Field Clerk: clerk1 / clerk123</div>
@@ -105,138 +105,148 @@
     </div>
 
     <script>
-        // Hardcoded credentials
-        const users = {
-            admin: { password: 'admin123', role: 'admin', name: 'Admin User' },
+        // ======================= CONFIGURATION =======================
+        let API_BASE = localStorage.getItem('api_base') || '';   // optional backend URL (ngrok)
+        const USERS = {
+            admin: { password: 'admin123', role: 'admin', name: 'Administrator' },
             clerk1: { password: 'clerk123', role: 'clerk', name: 'Field Clerk Officer' }
         };
         let currentRole = null;
         let map = null;
-        let carbonMap = null;
-        let apiBase = ''; // will be set by user
 
-        function doLogin() {
+        // ======================= LOGIN / LOGOUT =======================
+        window.doLogin = function() {
             const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
-            const user = users[username];
+            const user = USERS[username];
             if (user && user.password === password) {
                 currentRole = user.role;
                 document.getElementById('loginOverlay').style.display = 'none';
                 document.getElementById('appContainer').style.display = 'flex';
                 document.getElementById('userRoleBadge').innerHTML = currentRole === 'admin' ? '<i class="fas fa-user-shield"></i> Admin' : '<i class="fas fa-clipboard-list"></i> Field Clerk Officer';
                 buildUI();
-                if (currentRole === 'clerk') {
-                    // Prompt for backend URL once (or hardcode later)
-                    let backend = localStorage.getItem('backendUrl');
-                    if (!backend) {
-                        backend = prompt('Enter your backend API URL (e.g., https://your-ngrok.ngrok.io)');
-                        if (backend) localStorage.setItem('backendUrl', backend);
+
+                if (currentRole === 'clerk' && !API_BASE) {
+                    const url = prompt('Optional: Enter your backend API base URL (e.g., https://xyz.ngrok.io)\nLeave empty to use offline mock data.');
+                    if (url && url.startsWith('http')) {
+                        API_BASE = url;
+                        localStorage.setItem('api_base', API_BASE);
                     }
-                    apiBase = backend || '';
                 }
             } else {
-                document.getElementById('loginError').innerText = 'Invalid credentials. Try admin/admin123 or clerk1/clerk123';
+                document.getElementById('loginError').innerText = 'Invalid credentials. Use admin/admin123 or clerk1/clerk123';
             }
-        }
+        };
 
-        function logout() {
+        window.logout = function() {
             document.getElementById('loginOverlay').style.display = 'flex';
             document.getElementById('appContainer').style.display = 'none';
             if (map) map.remove();
             map = null;
             currentRole = null;
-        }
+        };
 
+        // ======================= MAP (with basemap switcher) =======================
         function initMap(containerId) {
+            if (map) return map;
             const container = document.getElementById(containerId);
             if (!container) return null;
             const newMap = L.map(containerId).setView([0.5, 36.5], 8);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            let currentTile = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
                 attribution: '© OpenStreetMap, CartoDB'
             }).addTo(newMap);
+
             L.marker([0.2345, 37.5678]).addTo(newMap).bindPopup('🏭 Rukuriri Hydro');
             L.marker([-0.4567, 37.7890]).addTo(newMap).bindPopup('🏭 Mungania Hydro');
             L.marker([0.23, 37.55]).addTo(newMap).bindPopup('🌿 Tea Block');
             L.polygon([[0.55,37.4],[0.55,37.5],[0.45,37.5],[0.45,37.4]], {color:'#2c5e2e', fillOpacity:0.1}).addTo(newMap).bindPopup('Mungania East Zone');
-            // Basemap selector
-            const basemapBtn = L.control({ position: 'topright' });
-            basemapBtn.onAdd = function() {
+
+            const basemapControl = L.control({ position: 'topright' });
+            basemapControl.onAdd = function() {
                 const div = L.DomUtil.create('div', 'basemap-selector');
                 div.innerHTML = '🗺️ Basemap ▼';
                 div.onclick = () => {
-                    const newBase = prompt('Enter basemap: street, satellite, terrain, dark', 'street');
-                    if (newBase === 'satellite') {
-                        newMap.eachLayer(l => { if (l._url && l._url.includes('cartocdn')) newMap.removeLayer(l); });
-                        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}').addTo(newMap);
-                    } else {
-                        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(newMap);
+                    const choice = prompt('Enter basemap: street, satellite, terrain, dark', 'street');
+                    let url;
+                    switch(choice) {
+                        case 'satellite': url = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'; break;
+                        case 'terrain': url = 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png'; break;
+                        case 'dark': url = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'; break;
+                        default: url = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
                     }
+                    newMap.removeLayer(currentTile);
+                    currentTile = L.tileLayer(url, { attribution: '© OpenStreetMap' }).addTo(newMap);
                 };
                 return div;
             };
-            basemapBtn.addTo(newMap);
+            basemapControl.addTo(newMap);
             return newMap;
         }
 
-        function initCarbonMap() {
-            if (carbonMap) return;
-            const container = document.getElementById('carbon-map');
-            if (!container) return;
-            carbonMap = L.map('carbon-map').setView([0.5,36.5],7);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(carbonMap);
-            L.marker([0.2345,37.5678]).addTo(carbonMap).bindPopup('Hydro');
-            L.circle([0.23,37.55], {radius:5000, color:'#4CAF50', fillOpacity:0.2}).addTo(carbonMap).bindPopup('Tea SOC Pilot');
-        }
+        // ======================= DELIVERY & REFRESH (works offline) =======================
+        let mockDeliveries = [
+            { farmer: 'James Mwangi', weight: 450, date: '2026-05-14', status: 'Completed' },
+            { farmer: 'Mary Wanjiku', weight: 380, date: '2026-05-13', status: 'Completed' }
+        ];
 
         async function refreshDeliveries() {
-            if (!apiBase) return;
-            const farmer = document.getElementById('deliveryFarmer')?.value;
-            if (!farmer) return;
+            const container = document.querySelector('#page-delivery .delivery-list');
+            if (!container) return;
+            if (!API_BASE) {
+                const html = mockDeliveries.map(d => `<div class="card"><strong>${d.farmer}</strong><br>${d.weight} kg – ${d.date}<br><span class="delivery-status status-completed">${d.status}</span></div>`).join('');
+                container.innerHTML = html || '<div class="card">No deliveries yet</div>';
+                return;
+            }
             try {
-                const res = await fetch(`${apiBase}/api/ktda/deliveries?limit=5`);
+                const res = await fetch(`${API_BASE}/api/ktda/deliveries?limit=5`);
                 const data = await res.json();
                 if (data.success && data.data) {
-                    const deliveriesHtml = data.data.map(d => `
-                        <div class="card">
-                            <strong>Farmer ID ${d.farmer_id}</strong><br>
-                            ${d.green_leaf_kg} kg - ${d.delivery_date}<br>
-                            <span style="color:#4caf50;">${d.leaf_grade} grade</span>
-                        </div>
-                    `).join('');
-                    const recentDiv = document.querySelector('#page-delivery .card:last-child');
-                    if (recentDiv) recentDiv.innerHTML = `<strong>Recent Deliveries</strong><br>${deliveriesHtml || 'No deliveries yet'}`;
+                    const html = data.data.map(d => `<div class="card"><strong>Farmer ${d.farmer_id}</strong><br>${d.green_leaf_kg} kg – ${d.delivery_date}<br><span class="delivery-status status-completed">${d.leaf_grade} grade</span></div>`).join('');
+                    container.innerHTML = html || '<div class="card">No deliveries yet</div>';
+                } else {
+                    container.innerHTML = '<div class="card">Failed to load deliveries</div>';
                 }
-            } catch (err) { console.warn('Could not refresh deliveries', err); }
+            } catch(e) {
+                container.innerHTML = '<div class="card">Error loading deliveries</div>';
+            }
         }
 
-        function submitDelivery() {
-            const farmer = document.getElementById('deliveryFarmer')?.value;
-            const weight = document.getElementById('deliveryWeight')?.value;
-            if (!farmer || !weight) { alert('Select farmer and enter weight'); return; }
-            fetch(`${apiBase}/api/ktda/deliveries`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ farmer_name: farmer, green_leaf_kg: parseFloat(weight), leaf_grade: 'A', delivery_date: new Date().toISOString().split('T')[0] })
-            })
-            .then(res => res.json())
-            .then(data => {
+        window.submitDelivery = async function() {
+            const farmerSelect = document.getElementById('deliveryFarmer');
+            const weightInput = document.getElementById('deliveryWeight');
+            if (!farmerSelect || !weightInput) return;
+            const farmer = farmerSelect.value;
+            const weight = parseFloat(weightInput.value);
+            if (isNaN(weight) || weight <= 0) { alert('Enter a valid weight'); return; }
+
+            if (!API_BASE) {
+                mockDeliveries.unshift({ farmer: farmer, weight: weight, date: new Date().toISOString().split('T')[0], status: 'Pending' });
+                refreshDeliveries();
+                alert('Delivery recorded (offline mock).');
+                weightInput.value = '';
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_BASE}/api/ktda/deliveries`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ farmer_name: farmer, green_leaf_kg: weight, leaf_grade: 'A', delivery_date: new Date().toISOString().split('T')[0] })
+                });
+                const data = await res.json();
                 if (data.success) {
                     alert('Delivery recorded!');
+                    weightInput.value = '';
                     refreshDeliveries();
-                } else alert('Error: ' + data.error);
-            })
-            .catch(err => alert('Connection error: ' + err));
-            document.getElementById('deliveryWeight').value = '';
-        }
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch(e) {
+                alert('Connection error. Check backend URL.');
+            }
+        };
 
-        function printReport() {
-            const content = document.getElementById('reportContent').innerHTML;
-            const win = window.open();
-            win.document.write(`<html><head><title>KTDA Report</title><style>body{font-family:Arial;padding:20px;}table{border-collapse:collapse;}th,td{border:1px solid #ddd;padding:8px;}th{background:#2c5e2e;color:white;}</style></head><body>${content}<p>Generated ${new Date().toLocaleString()}</p></body></html>`);
-            win.document.close();
-            win.print();
-        }
-
+        // ======================= UI BUILDER (role‑based) =======================
         function buildUI() {
             const tabsContainer = document.getElementById('tabsContainer');
             const pageContainer = document.getElementById('pageContainer');
@@ -277,21 +287,41 @@
 
             if (currentRole === 'admin') {
                 document.getElementById('page-map').innerHTML = `<div class="map-container" id="admin-map-container"><div id="admin-map" style="height:100%;"></div></div><div class="legend"><div><span class="legend-color" style="background:#e74c3c;"></span> Hydropower</div><div><span class="legend-color" style="background:#4CAF50;"></span> Tea Zones</div></div>`;
-                setTimeout(() => { if (!map) map = initMap('admin-map'); }, 100);
-                document.getElementById('page-farmers').innerHTML = `<h2>Registered Farmers</h2><div class="card"><table><th>ID</th><th>Name</th><th>Phone</th><th>Acreage</th><th>Zone</th></tr><tr><td>KTF001234</td><td>James Mwangi</td><td>0712345678</td><td>2.5</td><td>Rukuriri North</td></tr><tr><td>KTF001235</td><td>Mary Wanjiku</td><td>0723456789</td><td>3.2</td><td>Rukuriri North</td></tr><tr><td>KTF001238</td><td>John Kamau</td><td>0756789012</td><td>3.5</td><td>Mungania East</td></tr></table></div>`;
+                setTimeout(() => { map = initMap('admin-map'); }, 100);
+                document.getElementById('page-farmers').innerHTML = `<h2>Registered Farmers</h2><div class="card"><table><th>ID</th><th>Name</th><th>Phone</th><th>Acreage</th><th>Zone</th></tr><tr><td>KTF001234</td><td>James Mwangi</td><td>0712345678</td><td>2.5</td><td>Rukuriri North</td></tr><tr><td>KTF001235</td><td>Mary Wanjiku</td><td>0723456789</td><td>3.2</td><td>Rukuriri North</td></tr></table></div>`;
                 document.getElementById('page-farms').innerHTML = `<h2>Tea Estates & Carbon Stocks</h2><div class="card"><h3>Rukuriri Estate</h3><p>2,500 ha | Soil Carbon: 45,000 tCO₂e</p></div><div class="card"><h3>Mungania Estate</h3><p>3,200 ha | Soil Carbon: 58,000 tCO₂e</p></div>`;
                 document.getElementById('page-dashboard').innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;"><div class="card"><div class="stat-number">88,000</div><div>tCO₂e/year</div></div><div class="card"><div class="stat-number">$1.43M</div><div>Annual Value</div></div></div><div class="map-container" style="height:250px;"><div id="carbon-map" style="height:100%;"></div></div><div class="card"><canvas id="carbonChart" width="400" height="200"></canvas></div>`;
                 document.getElementById('page-reports').innerHTML = `<h2>Carbon Credit Reports</h2><div id="reportContent"><div class="card"><strong>Credits Issued:</strong> 88,000 tCO₂e</div><div class="card"><strong>Revenue:</strong> $1,426,500</div><div class="card"><strong>Buyers:</strong> Microsoft, Swiss Re</div></div><button class="print-btn" onclick="printReport()"><i class="fas fa-print"></i> Print / PDF</button>`;
                 setTimeout(() => {
+                    if (document.getElementById('carbon-map') && !window.carbonMap) {
+                        window.carbonMap = L.map('carbon-map').setView([0.5,36.5],7);
+                        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(window.carbonMap);
+                        L.marker([0.2345,37.5678]).addTo(window.carbonMap).bindPopup('Hydro');
+                        L.circle([0.23,37.55], {radius:5000, color:'#4CAF50', fillOpacity:0.2}).addTo(window.carbonMap).bindPopup('Tea SOC Pilot');
+                    }
                     const ctx = document.getElementById('carbonChart')?.getContext('2d');
-                    if (ctx) new Chart(ctx, { type: 'pie', data: { labels: ['Hydropower', 'Tea SOC', 'Tree ARR'], datasets: [{ data: [25000,45000,18000], backgroundColor: ['#e74c3c','#4CAF50','#2196F3'] }] } });
-                    initCarbonMap();
+                    if (ctx && !window.carbonChart) {
+                        window.carbonChart = new Chart(ctx, { type: 'pie', data: { labels: ['Hydropower', 'Tea SOC', 'Tree ARR'], datasets: [{ data: [25000,45000,18000], backgroundColor: ['#e74c3c','#4CAF50','#2196F3'] }] } });
+                    }
                 }, 150);
             } else {
                 document.getElementById('page-farmers').innerHTML = `<h2>Assigned Farmers</h2><div class="card"><strong>James Mwangi</strong> – 2.5 acres</div><div class="card"><strong>Mary Wanjiku</strong> – 3.2 acres</div><div class="card"><strong>John Kamau</strong> – 3.5 acres</div>`;
-                document.getElementById('page-delivery').innerHTML = `<h2>Record Tea Delivery</h2><div class="card"><label>Farmer</label><select id="deliveryFarmer" style="width:100%; padding:8px;"><option>James Mwangi</option><option>Mary Wanjiku</option><option>John Kamau</option></select><label>Weight (kg)</label><input type="number" id="deliveryWeight" style="width:100%; padding:8px; margin-top:5px;"><button class="delivery-submit" onclick="submitDelivery()">Submit Delivery</button></div><div class="card"><strong>Recent Deliveries</strong><br>Loading...</div>`;
+                document.getElementById('page-delivery').innerHTML = `
+                    <h2>Record Tea Delivery</h2>
+                    <div class="card">
+                        <label>Farmer</label>
+                        <select id="deliveryFarmer" style="width:100%; padding:8px;">
+                            <option>James Mwangi</option><option>Mary Wanjiku</option><option>John Kamau</option>
+                        </select>
+                        <label>Weight (kg)</label>
+                        <input type="number" id="deliveryWeight" style="width:100%; padding:8px; margin-top:5px;">
+                        <button class="delivery-submit" onclick="submitDelivery()">Submit Delivery</button>
+                    </div>
+                    <div class="delivery-list"></div>
+                `;
                 document.getElementById('page-map').innerHTML = `<div class="map-container" id="clerk-map-container"><div id="clerk-map" style="height:100%;"></div></div><div class="legend"><div><span class="legend-color" style="background:#e74c3c;"></span> Hydropower</div><div><span class="legend-color" style="background:#4CAF50;"></span> Tea Zones</div></div>`;
-                setTimeout(() => { if (!map) map = initMap('clerk-map'); refreshDeliveries(); }, 100);
+                setTimeout(() => { map = initMap('clerk-map'); }, 100);
+                refreshDeliveries();
             }
         }
 
@@ -305,6 +335,14 @@
             if (pageId === 'map' && map) setTimeout(() => map.invalidateSize(), 100);
             if (pageId === 'delivery' && currentRole === 'clerk') refreshDeliveries();
         }
+
+        window.printReport = function() {
+            const content = document.getElementById('reportContent').innerHTML;
+            const win = window.open();
+            win.document.write(`<html><head><title>KTDA Report</title><style>body{font-family:Arial;padding:20px;}table{border-collapse:collapse;}th,td{border:1px solid #ddd;padding:8px;}th{background:#2c5e2e;color:white;}</style></head><body>${content}<p>Generated ${new Date().toLocaleString()}</p></body></html>`);
+            win.document.close();
+            win.print();
+        };
     </script>
 </body>
 </html>
