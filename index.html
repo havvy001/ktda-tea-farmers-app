@@ -87,7 +87,7 @@
     <div id="loginOverlay" class="login-overlay">
         <div class="login-card">
             <h2>🌍 KTDA GIS</h2>
-            <input type="text" id="username" placeholder="Username">
+            <input type="text" id="username" placeholder="Username" autocomplete="off">
             <input type="password" id="password" placeholder="Password">
             <button onclick="doLogin()">Login</button>
             <div id="loginError" class="error-msg"></div>
@@ -105,19 +105,19 @@
     </div>
 
     <script>
-        const API_BASE = 'https://those-immersion-frustrate.ngrok-free.dev';  // will be replaced
+        // Hardcoded credentials
         const users = {
-            admin: { password: 'admin123', role: 'admin', name: 'Admin' },
+            admin: { password: 'admin123', role: 'admin', name: 'Admin User' },
             clerk1: { password: 'clerk123', role: 'clerk', name: 'Field Clerk Officer' }
         };
         let currentRole = null;
         let map = null;
         let carbonMap = null;
+        let apiBase = ''; // will be set by user
 
-                function doLogin() {
+        function doLogin() {
             const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
-            console.log('Login attempt:', username, password);
             const user = users[username];
             if (user && user.password === password) {
                 currentRole = user.role;
@@ -125,9 +125,17 @@
                 document.getElementById('appContainer').style.display = 'flex';
                 document.getElementById('userRoleBadge').innerHTML = currentRole === 'admin' ? '<i class="fas fa-user-shield"></i> Admin' : '<i class="fas fa-clipboard-list"></i> Field Clerk Officer';
                 buildUI();
+                if (currentRole === 'clerk') {
+                    // Prompt for backend URL once (or hardcode later)
+                    let backend = localStorage.getItem('backendUrl');
+                    if (!backend) {
+                        backend = prompt('Enter your backend API URL (e.g., https://your-ngrok.ngrok.io)');
+                        if (backend) localStorage.setItem('backendUrl', backend);
+                    }
+                    apiBase = backend || '';
+                }
             } else {
                 document.getElementById('loginError').innerText = 'Invalid credentials. Try admin/admin123 or clerk1/clerk123';
-                console.error('Login failed');
             }
         }
 
@@ -150,14 +158,19 @@
             L.marker([-0.4567, 37.7890]).addTo(newMap).bindPopup('🏭 Mungania Hydro');
             L.marker([0.23, 37.55]).addTo(newMap).bindPopup('🌿 Tea Block');
             L.polygon([[0.55,37.4],[0.55,37.5],[0.45,37.5],[0.45,37.4]], {color:'#2c5e2e', fillOpacity:0.1}).addTo(newMap).bindPopup('Mungania East Zone');
+            // Basemap selector
             const basemapBtn = L.control({ position: 'topright' });
             basemapBtn.onAdd = function() {
                 const div = L.DomUtil.create('div', 'basemap-selector');
                 div.innerHTML = '🗺️ Basemap ▼';
                 div.onclick = () => {
                     const newBase = prompt('Enter basemap: street, satellite, terrain, dark', 'street');
-                    if (newBase === 'satellite') newMap.eachLayer(l => { if (l._url && l._url.includes('cartocdn')) newMap.removeLayer(l); });
-                    L.tileLayer(newBase === 'satellite' ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}' : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(newMap);
+                    if (newBase === 'satellite') {
+                        newMap.eachLayer(l => { if (l._url && l._url.includes('cartocdn')) newMap.removeLayer(l); });
+                        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}').addTo(newMap);
+                    } else {
+                        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(newMap);
+                    }
                 };
                 return div;
             };
@@ -175,38 +188,42 @@
             L.circle([0.23,37.55], {radius:5000, color:'#4CAF50', fillOpacity:0.2}).addTo(carbonMap).bindPopup('Tea SOC Pilot');
         }
 
-                async function refreshDeliveries() {
-            const farmerName = document.getElementById('deliveryFarmer')?.value;
-            if (!farmerName) return;
-            // Fetch deliveries for the selected farmer (or all)
-            const response = await fetch(API_BASE + '/api/ktda/deliveries?limit=5');
-            const data = await response.json();
-            if (data.success && data.data) {
-                const deliveriesHtml = data.data.map(d => 
-                    <div class="card">
-                        <strong>Farmer ID </strong><br>
-                         kg - <br>
-                        <span class="delivery-status status-completed"> grade</span>
-                    </div>
-                ).join('');
-                const recentDiv = document.querySelector('#page-delivery .card:last-child');
-                if (recentDiv) recentDiv.innerHTML = <strong>Recent Deliveries</strong><br>;
-            }
+        async function refreshDeliveries() {
+            if (!apiBase) return;
+            const farmer = document.getElementById('deliveryFarmer')?.value;
+            if (!farmer) return;
+            try {
+                const res = await fetch(`${apiBase}/api/ktda/deliveries?limit=5`);
+                const data = await res.json();
+                if (data.success && data.data) {
+                    const deliveriesHtml = data.data.map(d => `
+                        <div class="card">
+                            <strong>Farmer ID ${d.farmer_id}</strong><br>
+                            ${d.green_leaf_kg} kg - ${d.delivery_date}<br>
+                            <span style="color:#4caf50;">${d.leaf_grade} grade</span>
+                        </div>
+                    `).join('');
+                    const recentDiv = document.querySelector('#page-delivery .card:last-child');
+                    if (recentDiv) recentDiv.innerHTML = `<strong>Recent Deliveries</strong><br>${deliveriesHtml || 'No deliveries yet'}`;
+                }
+            } catch (err) { console.warn('Could not refresh deliveries', err); }
         }
 
-        
+        function submitDelivery() {
             const farmer = document.getElementById('deliveryFarmer')?.value;
             const weight = document.getElementById('deliveryWeight')?.value;
             if (!farmer || !weight) { alert('Select farmer and enter weight'); return; }
-            fetch(API_BASE + '/api/ktda/deliveries', {
+            fetch(`${apiBase}/api/ktda/deliveries`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ farmer_name: farmer, green_leaf_kg: parseFloat(weight), leaf_grade: 'A', delivery_date: new Date().toISOString().split('T')[0] })
             })
             .then(res => res.json())
             .then(data => {
-                if (data.success) alert('Delivery recorded!');
-                else alert('Error: ' + data.error);
+                if (data.success) {
+                    alert('Delivery recorded!');
+                    refreshDeliveries();
+                } else alert('Error: ' + data.error);
             })
             .catch(err => alert('Connection error: ' + err));
             document.getElementById('deliveryWeight').value = '';
@@ -226,9 +243,22 @@
             tabsContainer.innerHTML = '';
             pageContainer.innerHTML = '';
 
-            let tabs = currentRole === 'admin'
-                ? [{ id: 'map', label: '🗺️ Map', icon: 'map' }, { id: 'farmers', label: '👨‍🌾 Farmers', icon: 'users' }, { id: 'farms', label: '🌾 Farms', icon: 'tractor' }, { id: 'dashboard', label: '📊 Dashboard', icon: 'chart-line' }, { id: 'reports', label: '📈 Reports', icon: 'file-alt' }]
-                : [{ id: 'farmers', label: '👨‍🌾 Farmers', icon: 'users' }, { id: 'delivery', onFirstShow: () => refreshDeliveries(), label: '🚚 Record Delivery', icon: 'truck' }, { id: 'map', label: '🗺️ Map', icon: 'map' }];
+            let tabs;
+            if (currentRole === 'admin') {
+                tabs = [
+                    { id: 'map', label: '🗺️ Map', icon: 'map' },
+                    { id: 'farmers', label: '👨‍🌾 Farmers', icon: 'users' },
+                    { id: 'farms', label: '🌾 Farms', icon: 'tractor' },
+                    { id: 'dashboard', label: '📊 Dashboard', icon: 'chart-line' },
+                    { id: 'reports', label: '📈 Reports', icon: 'file-alt' }
+                ];
+            } else {
+                tabs = [
+                    { id: 'farmers', label: '👨‍🌾 Farmers', icon: 'users' },
+                    { id: 'delivery', label: '🚚 Record Delivery', icon: 'truck' },
+                    { id: 'map', label: '🗺️ Map', icon: 'map' }
+                ];
+            }
 
             tabs.forEach((tab, idx) => {
                 const btn = document.createElement('div');
@@ -248,7 +278,7 @@
             if (currentRole === 'admin') {
                 document.getElementById('page-map').innerHTML = `<div class="map-container" id="admin-map-container"><div id="admin-map" style="height:100%;"></div></div><div class="legend"><div><span class="legend-color" style="background:#e74c3c;"></span> Hydropower</div><div><span class="legend-color" style="background:#4CAF50;"></span> Tea Zones</div></div>`;
                 setTimeout(() => { if (!map) map = initMap('admin-map'); }, 100);
-                document.getElementById('page-farmers').innerHTML = `<h2>Registered Farmers</h2><div class="card"><tr><th>ID</th><th>Name</th><th>Phone</th><th>Acreage</th><th>Zone</th></tr><tr><td>KTF001234</td><td>James Mwangi</td><td>0712345678</td><td>2.5</td><td>Rukuriri North</td></tr><tr><td>KTF001235</td><td>Mary Wanjiku</td><td>0723456789</td><td>3.2</td><td>Rukuriri North</td></tr><tr><td>KTF001238</td><td>John Kamau</td><td>0756789012</td><td>3.5</td><td>Mungania East</td></tr></table></div>`;
+                document.getElementById('page-farmers').innerHTML = `<h2>Registered Farmers</h2><div class="card"><table><th>ID</th><th>Name</th><th>Phone</th><th>Acreage</th><th>Zone</th></tr><tr><td>KTF001234</td><td>James Mwangi</td><td>0712345678</td><td>2.5</td><td>Rukuriri North</td></tr><tr><td>KTF001235</td><td>Mary Wanjiku</td><td>0723456789</td><td>3.2</td><td>Rukuriri North</td></tr><tr><td>KTF001238</td><td>John Kamau</td><td>0756789012</td><td>3.5</td><td>Mungania East</td></tr></table></div>`;
                 document.getElementById('page-farms').innerHTML = `<h2>Tea Estates & Carbon Stocks</h2><div class="card"><h3>Rukuriri Estate</h3><p>2,500 ha | Soil Carbon: 45,000 tCO₂e</p></div><div class="card"><h3>Mungania Estate</h3><p>3,200 ha | Soil Carbon: 58,000 tCO₂e</p></div>`;
                 document.getElementById('page-dashboard').innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;"><div class="card"><div class="stat-number">88,000</div><div>tCO₂e/year</div></div><div class="card"><div class="stat-number">$1.43M</div><div>Annual Value</div></div></div><div class="map-container" style="height:250px;"><div id="carbon-map" style="height:100%;"></div></div><div class="card"><canvas id="carbonChart" width="400" height="200"></canvas></div>`;
                 document.getElementById('page-reports').innerHTML = `<h2>Carbon Credit Reports</h2><div id="reportContent"><div class="card"><strong>Credits Issued:</strong> 88,000 tCO₂e</div><div class="card"><strong>Revenue:</strong> $1,426,500</div><div class="card"><strong>Buyers:</strong> Microsoft, Swiss Re</div></div><button class="print-btn" onclick="printReport()"><i class="fas fa-print"></i> Print / PDF</button>`;
@@ -259,9 +289,9 @@
                 }, 150);
             } else {
                 document.getElementById('page-farmers').innerHTML = `<h2>Assigned Farmers</h2><div class="card"><strong>James Mwangi</strong> – 2.5 acres</div><div class="card"><strong>Mary Wanjiku</strong> – 3.2 acres</div><div class="card"><strong>John Kamau</strong> – 3.5 acres</div>`;
-                document.getElementById('page-delivery').innerHTML = `<h2>Record Tea Delivery</h2><div class="card"><label>Farmer</label><select id="deliveryFarmer" style="width:100%; padding:8px;"><option>James Mwangi</option><option>Mary Wanjiku</option><option>John Kamau</option></select><label>Weight (kg)</label><input type="number" id="deliveryWeight" style="width:100%; padding:8px; margin-top:5px;"><button class="delivery-submit" onclick="submitDelivery()">Submit Delivery</button></div><div class="card"><strong>Recent Deliveries</strong><br>James Mwangi: 450 kg (Completed)</div>`;
+                document.getElementById('page-delivery').innerHTML = `<h2>Record Tea Delivery</h2><div class="card"><label>Farmer</label><select id="deliveryFarmer" style="width:100%; padding:8px;"><option>James Mwangi</option><option>Mary Wanjiku</option><option>John Kamau</option></select><label>Weight (kg)</label><input type="number" id="deliveryWeight" style="width:100%; padding:8px; margin-top:5px;"><button class="delivery-submit" onclick="submitDelivery()">Submit Delivery</button></div><div class="card"><strong>Recent Deliveries</strong><br>Loading...</div>`;
                 document.getElementById('page-map').innerHTML = `<div class="map-container" id="clerk-map-container"><div id="clerk-map" style="height:100%;"></div></div><div class="legend"><div><span class="legend-color" style="background:#e74c3c;"></span> Hydropower</div><div><span class="legend-color" style="background:#4CAF50;"></span> Tea Zones</div></div>`;
-                setTimeout(() => { if (!map) map = initMap('clerk-map'); }, 100);
+                setTimeout(() => { if (!map) map = initMap('clerk-map'); refreshDeliveries(); }, 100);
             }
         }
 
@@ -273,9 +303,8 @@
             const activeTab = Array.from(document.querySelectorAll('.tab')).find(t => t.innerText.toLowerCase().includes(pageId));
             if (activeTab) activeTab.classList.add('active');
             if (pageId === 'map' && map) setTimeout(() => map.invalidateSize(), 100);
+            if (pageId === 'delivery' && currentRole === 'clerk') refreshDeliveries();
         }
     </script>
 </body>
 </html>
-
-
