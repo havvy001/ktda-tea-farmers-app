@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>KTDA GIS – Carbon & Tea Management</title>
-    <!-- Leaflet + Chart.js + Font Awesome -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -12,7 +11,6 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f4f0; height: 100vh; overflow: hidden; }
-        /* Login overlay */
         .login-overlay {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
@@ -52,29 +50,25 @@
             cursor: pointer;
         }
         .error-msg { color: red; font-size: 14px; margin-top: 10px; }
-        /* Main app (hidden until login) */
         .app-container { display: none; height: 100vh; flex-direction: column; }
-        /* Header */
         .header { background: #2c5e2e; color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; }
         .header h1 { font-size: 18px; display: flex; align-items: center; gap: 8px; }
-        /* Bottom navigation */
         .tabs { display: flex; background: white; position: fixed; bottom: 0; left: 0; right: 0; z-index: 100; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); }
         .tab { flex: 1; text-align: center; padding: 10px; cursor: pointer; font-size: 12px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
         .tab.active { background: #2c5e2e; color: white; }
-        /* Page content */
         .page { display: none; height: calc(100vh - 110px); overflow-y: auto; padding: 15px; margin-top: 60px; margin-bottom: 50px; }
         .page.active { display: block; }
-        /* Cards, map, etc. */
         .map-container { height: 60vh; border-radius: 12px; overflow: hidden; margin-bottom: 15px; }
-        #map { height: 100%; width: 100%; }
+        #map, .carbon-map { height: 100%; width: 100%; }
         .card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
         .stat-number { font-size: 28px; font-weight: bold; color: #2c5e2e; }
         table { width: 100%; border-collapse: collapse; }
         th, td { padding: 8px; text-align: left; border-bottom: 1px solid #eee; }
         th { background: #2c5e2e; color: white; }
-        .legend { display: flex; gap: 15px; font-size: 12px; margin-top: 10px; }
+        .legend { display: flex; gap: 15px; font-size: 12px; margin-top: 10px; flex-wrap: wrap; }
         .legend-color { width: 14px; height: 14px; display: inline-block; margin-right: 5px; border-radius: 3px; }
-        /* Responsive */
+        button.delivery-submit { background: #2c5e2e; color: white; border: none; padding: 10px; border-radius: 8px; width: 100%; margin-top: 10px; cursor: pointer; }
+        .print-btn { background: #2196f3; color: white; border: none; padding: 8px 16px; border-radius: 6px; margin-top: 10px; cursor: pointer; }
         @media (max-width: 768px) { .page { padding: 10px; } }
     </style>
 </head>
@@ -88,12 +82,12 @@
             <button onclick="doLogin()">Login</button>
             <div id="loginError" class="error-msg"></div>
             <div style="margin-top: 15px; font-size: 12px; color: #666;">
-                Demo:<br>Admin: admin / admin123<br>Farmer: farmer1 / farmer123
+                Demo:<br>Admin: admin / admin123<br>Field Clerk: clerk1 / clerk123
             </div>
         </div>
     </div>
 
-    <!-- Main App (hidden until login) -->
+    <!-- Main App -->
     <div id="appContainer" class="app-container">
         <div class="header">
             <h1><i class="fas fa-leaf"></i> KTDA GIS</h1>
@@ -104,14 +98,15 @@
     </div>
 
     <script>
-        // Hardcoded demo credentials
+        // Hardcoded demo credentials (admin + field clerk)
         const users = {
             admin: { password: 'admin123', role: 'admin', name: 'Admin User' },
-            farmer1: { password: 'farmer123', role: 'normal', name: 'John Farmer' }
+            clerk1: { password: 'clerk123', role: 'clerk', name: 'Field Clerk Officer' }
         };
 
         let currentRole = null;
         let map = null;
+        let carbonMap = null;
 
         function doLogin() {
             const username = document.getElementById('username').value.trim();
@@ -121,9 +116,10 @@
                 currentRole = user.role;
                 document.getElementById('loginOverlay').style.display = 'none';
                 document.getElementById('appContainer').style.display = 'flex';
-                document.getElementById('userRoleBadge').innerText = user.role === 'admin' ? '👑 Admin' : '👨‍🌾 Farmer';
+                document.getElementById('userRoleBadge').innerHTML = currentRole === 'admin' ? '<i class="fas fa-user-shield"></i> Admin' : '<i class="fas fa-clipboard-list"></i> Field Clerk Officer';
                 buildUI();
-                initMap();
+                initSharedMap(); // ensure map is initialized once
+                if (currentRole === 'admin') initCarbonMap();
             } else {
                 document.getElementById('loginError').innerText = 'Invalid credentials';
             }
@@ -133,6 +129,54 @@
             document.getElementById('loginOverlay').style.display = 'flex';
             document.getElementById('appContainer').style.display = 'none';
             currentRole = null;
+            if (map) map.remove();
+            map = null;
+        }
+
+        function initSharedMap() {
+            if (map) return;
+            const mapContainer = document.getElementById('shared-map-container');
+            if (!mapContainer) return;
+            map = L.map('shared-map').setView([0.5,36.5],8);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '© OpenStreetMap' }).addTo(map);
+            L.marker([0.2345,37.5678]).addTo(map).bindPopup('🏭 Rukuriri Hydro');
+            L.marker([-0.4567,37.7890]).addTo(map).bindPopup('🏭 Mungania Hydro');
+            L.marker([0.23,37.55]).addTo(map).bindPopup('🌿 Tea Block');
+            L.polygon([[0.55,37.4],[0.55,37.5],[0.45,37.5],[0.45,37.4]], {color:'#2c5e2e', fillOpacity:0.1}).addTo(map).bindPopup('Mungania East Zone');
+        }
+
+        function initCarbonMap() {
+            if (carbonMap) return;
+            const carbonMapDiv = document.getElementById('carbon-map');
+            if (!carbonMapDiv) return;
+            carbonMap = L.map('carbon-map').setView([0.5,36.5],7);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(carbonMap);
+            L.marker([0.2345,37.5678]).addTo(carbonMap).bindPopup('Hydro');
+            L.circle([0.23,37.55], {radius:5000, color:'#4CAF50', fillOpacity:0.2}).addTo(carbonMap).bindPopup('Tea SOC Pilot');
+        }
+
+        function submitDelivery() {
+            const farmer = document.getElementById('deliveryFarmer')?.value;
+            const weight = document.getElementById('deliveryWeight')?.value;
+            if (!farmer || !weight) {
+                alert('Please select a farmer and enter weight');
+                return;
+            }
+            alert(`Delivery recorded for ${farmer}: ${weight} kg. (Demo – actual backend integration pending)`);
+            // Optional: clear form
+            document.getElementById('deliveryWeight').value = '';
+        }
+
+        function printReport() {
+            const reportContent = document.getElementById('reportContent').innerHTML;
+            const win = window.open();
+            win.document.write(`
+                <html><head><title>KTDA Carbon Report</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+                <style>body{font-family:Arial; padding:20px;} table{border-collapse:collapse; width:100%;} th,td{border:1px solid #ddd; padding:8px;} th{background:#2c5e2e; color:white;}</style></head>
+                <body>${reportContent}<p><em>Generated on ${new Date().toLocaleString()}</em></p></body></html>
+            `);
+            win.document.close();
+            win.print();
         }
 
         function buildUI() {
@@ -153,12 +197,11 @@
             } else {
                 tabs = [
                     { id: 'farmers', label: '👨‍🌾 Farmers', icon: 'users' },
-                    { id: 'delivery', label: '🚚 Delivery', icon: 'truck' },
+                    { id: 'delivery', label: '🚚 Record Delivery', icon: 'truck' },
                     { id: 'map', label: '🗺️ Map', icon: 'map' }
                 ];
             }
 
-            // Create tabs
             tabs.forEach((tab, idx) => {
                 const btn = document.createElement('div');
                 btn.className = 'tab';
@@ -166,7 +209,6 @@
                 btn.innerHTML = `<i class="fas fa-${tab.icon}"></i><span>${tab.label}</span>`;
                 btn.onclick = () => showPage(tab.id);
                 tabsContainer.appendChild(btn);
-                // Create page div
                 const pageDiv = document.createElement('div');
                 pageDiv.id = `page-${tab.id}`;
                 pageDiv.className = 'page';
@@ -175,19 +217,18 @@
                 pageContainer.appendChild(pageDiv);
             });
 
-            // Populate page contents
+            // --- Admin pages content ---
             if (currentRole === 'admin') {
                 // Farmers page (simple table)
                 document.getElementById('page-farmers').innerHTML = `
                     <h2>Registered Farmers</h2>
                     <div class="card">
-                        <table>
-                            <thead><tr><th>ID</th><th>Name</th><th>Phone</th><th>Acreage</th><th>Zone</th></tr></thead>
-                            <tbody>
-                                <tr><td>KTF001234</td><td>James Mwangi</td><td>0712345678</td><td>2.5</td><td>Rukuriri North</td></tr>
-                                <tr><td>KTF001235</td><td>Mary Wanjiku</td><td>0723456789</td><td>3.2</td><td>Rukuriri North</td></tr>
-                                <tr><td>KTF001238</td><td>John Kamau</td><td>0756789012</td><td>3.5</td><td>Mungania East</td></tr>
-                            </tbody>
+                        <table><thead><tr><th>ID</th><th>Name</th><th>Phone</th><th>Acreage</th><th>Zone</th></tr></thead>
+                        <tbody>
+                            <tr><td>KTF001234</td><td>James Mwangi</td><td>0712345678</td><td>2.5</td><td>Rukuriri North</td></tr>
+                            <tr><td>KTF001235</td><td>Mary Wanjiku</td><td>0723456789</td><td>3.2</td><td>Rukuriri North</td></tr>
+                            <tr><td>KTF001238</td><td>John Kamau</td><td>0756789012</td><td>3.5</td><td>Mungania East</td></tr>
+                        </tbody>
                         </table>
                     </div>
                 `;
@@ -198,42 +239,62 @@
                     <div class="card"><h3>Mungania Estate</h3><p>Area: 3,200 ha | Soil Carbon: 58,000 tCO₂e | Annual increase: 4,100 tCO₂e</p></div>
                     <div class="card"><h3>Kagwe Estate</h3><p>Area: 1,800 ha | Soil Carbon: 32,000 tCO₂e | Annual increase: 2,100 tCO₂e</p></div>
                 `;
-                // Dashboard (carbon dashboard)
+                // Dashboard (carbon)
                 document.getElementById('page-dashboard').innerHTML = `
-                    <div class="grid" style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:15px;">
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:15px;">
                         <div class="card"><div class="stat-number">88,000</div><div>Total tCO₂e/year</div></div>
                         <div class="card"><div class="stat-number">$1.43M</div><div>Annual Value</div></div>
                     </div>
-                    <div class="map-container" id="carbonMap" style="height:250px;"></div>
-                    <div class="card"><canvas id="carbonChart"></canvas></div>
+                    <div class="map-container" style="height:250px;"><div id="carbon-map" style="height:100%;"></div></div>
+                    <div class="card"><canvas id="carbonChart" width="400" height="200"></canvas></div>
                     <div class="legend"><div><span class="legend-color" style="background:#e74c3c;"></span> Hydropower</div><div><span class="legend-color" style="background:#4CAF50;"></span> Tea SOC</div><div><span class="legend-color" style="background:#2196F3;"></span> Trees</div></div>
                 `;
-                // Reports page
+                // Reports page (printable)
                 document.getElementById('page-reports').innerHTML = `
                     <h2>Carbon Credit Reports</h2>
-                    <div class="card"><strong>Total Credits Issued (2026):</strong> 88,000 tCO₂e</div>
-                    <div class="card"><strong>Revenue:</strong> $1,426,500</div>
-                    <div class="card"><strong>Buyers:</strong> Microsoft, Swiss Re, Nestlé</div>
-                    <div class="card"><strong>Registry:</strong> Verra (VCUs)</div>
+                    <div id="reportContent">
+                        <div class="card"><strong>Total Credits Issued (2026):</strong> 88,000 tCO₂e</div>
+                        <div class="card"><strong>Revenue:</strong> $1,426,500</div>
+                        <div class="card"><strong>Buyers:</strong> Microsoft, Swiss Re, Nestlé</div>
+                        <div class="card"><strong>Registry:</strong> Verra (VCUs)</div>
+                    </div>
+                    <button class="print-btn" onclick="printReport()"><i class="fas fa-print"></i> Print / Download PDF</button>
                 `;
-                // Initialize carbon dashboard chart and map after DOM ready
+                // Initialize carbon map and chart after DOM ready
                 setTimeout(() => {
                     const ctx = document.getElementById('carbonChart')?.getContext('2d');
                     if (ctx) new Chart(ctx, { type: 'pie', data: { labels: ['Hydropower', 'Tea SOC', 'Tree ARR'], datasets: [{ data: [25000,45000,18000], backgroundColor: ['#e74c3c','#4CAF50','#2196F3'] }] } });
-                    const carbonMap = L.map('carbonMap').setView([0.5,36.5],7);
-                    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(carbonMap);
-                    L.marker([0.2345,37.5678]).addTo(carbonMap).bindPopup('Rukuriri Hydro');
-                    L.circle([0.23,37.55], {radius:5000, color:'#4CAF50', fillOpacity:0.2}).addTo(carbonMap).bindPopup('Tea SOC Pilot');
+                    initCarbonMap();
                 }, 100);
             } else {
-                // Normal user: Farmers, Delivery, Map
-                document.getElementById('page-farmers').innerHTML = `<h2>Your Farmers</h2><div class="card">You have access to 3 farmers in your zone.</div><div class="card">James Mwangi – 2.5 acres<br>Mary Wanjiku – 3.2 acres<br>John Kamau – 3.5 acres</div>`;
+                // Field Clerk pages
+                // Farmers page
+                document.getElementById('page-farmers').innerHTML = `
+                    <h2>Assigned Farmers</h2>
+                    <div class="card"><strong>James Mwangi</strong> – 2.5 acres, Rukuriri North</div>
+                    <div class="card"><strong>Mary Wanjiku</strong> – 3.2 acres, Rukuriri North</div>
+                    <div class="card"><strong>John Kamau</strong> – 3.5 acres, Mungania East</div>
+                `;
+                // Delivery page with active form
                 document.getElementById('page-delivery').innerHTML = `
                     <h2>Record Tea Delivery</h2>
-                    <div class="card"><label>Select Farmer</label><select><option>James Mwangi</option><option>Mary Wanjiku</option></select><br><label>Weight (kg)</label><input type="number" placeholder="kg"><button style="margin-top:10px; background:#2c5e2e; color:white; padding:8px; border:none; width:100%;">Submit</button></div>
+                    <div class="card">
+                        <label>Select Farmer</label>
+                        <select id="deliveryFarmer" style="width:100%; padding:8px; margin-top:5px; margin-bottom:10px;">
+                            <option value="James Mwangi">James Mwangi</option>
+                            <option value="Mary Wanjiku">Mary Wanjiku</option>
+                            <option value="John Kamau">John Kamau</option>
+                        </select>
+                        <label>Weight (kg)</label>
+                        <input type="number" id="deliveryWeight" placeholder="Enter weight in kg" style="width:100%; padding:8px; margin-top:5px;">
+                        <button class="delivery-submit" onclick="submitDelivery()"><i class="fas fa-save"></i> Submit Delivery</button>
+                    </div>
                     <div class="card"><strong>Recent Deliveries</strong><br>James Mwangi: 450 kg (Completed)<br>Mary Wanjiku: 380 kg (Completed)</div>
                 `;
-                // For map page, we'll reuse the global map (initialized separately)
+                // Map page – we will reuse shared map, but need a container
+                document.getElementById('page-map').innerHTML = `<div class="map-container" id="shared-map-container"><div id="shared-map" style="height:100%;"></div></div><div class="legend"><div><span class="legend-color" style="background:#e74c3c;"></span> Hydropower</div><div><span class="legend-color" style="background:#4CAF50;"></span> Tea Zones</div></div>`;
+                // Initialize map after the container exists
+                setTimeout(() => initSharedMap(), 50);
             }
         }
 
@@ -247,27 +308,8 @@
             if (pageId === 'map' && map) setTimeout(() => map.invalidateSize(), 100);
         }
 
-        function initMap() {
-            if (map) return;
-            map = L.map('map-container-for-map').setView([0.5,36.5],8);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
-            L.marker([0.2345,37.5678]).addTo(map).bindPopup('Rukuriri Hydro');
-            L.marker([-0.4567,37.7890]).addTo(map).bindPopup('Mungania Hydro');
-            L.marker([0.23,37.55]).addTo(map).bindPopup('Tea Block');
-            L.polygon([[0.55,37.4],[0.55,37.5],[0.45,37.5],[0.45,37.4]], {color:'#2c5e2e', fillOpacity:0.1}).addTo(map).bindPopup('Mungania East Zone');
-        }
-
-        // Override: ensure map page gets a container after login
-        const originalBuildUI = buildUI;
-        buildUI = function() {
-            originalBuildUI();
-            // For both roles, we need a map container in the map page.
-            const mapPage = document.getElementById('page-map');
-            if (mapPage && !mapPage.querySelector('#map-container-for-map')) {
-                mapPage.innerHTML = '<div class="map-container" id="map-container-for-map" style="height:60vh;"></div><div class="legend"><div><span class="legend-color" style="background:#e74c3c;"></span> Hydropower</div><div><span class="legend-color" style="background:#4CAF50;"></span> Tea Zones</div></div>';
-                initMap();
-            }
-        };
+        // Ensure map container exists for clerk before initializing
+        window.buildUI = buildUI;
     </script>
 </body>
 </html>
