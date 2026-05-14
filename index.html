@@ -114,9 +114,10 @@
         let map = null;
         let carbonMap = null;
 
-        function doLogin() {
+                function doLogin() {
             const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
+            console.log('Login attempt:', username, password);
             const user = users[username];
             if (user && user.password === password) {
                 currentRole = user.role;
@@ -125,7 +126,8 @@
                 document.getElementById('userRoleBadge').innerHTML = currentRole === 'admin' ? '<i class="fas fa-user-shield"></i> Admin' : '<i class="fas fa-clipboard-list"></i> Field Clerk Officer';
                 buildUI();
             } else {
-                document.getElementById('loginError').innerText = 'Invalid credentials';
+                document.getElementById('loginError').innerText = 'Invalid credentials. Try admin/admin123 or clerk1/clerk123';
+                console.error('Login failed');
             }
         }
 
@@ -275,4 +277,5 @@
     </script>
 </body>
 </html>
+
 
