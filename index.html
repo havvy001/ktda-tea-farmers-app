@@ -56,9 +56,9 @@
         .tab { flex: 1; text-align: center; padding: 10px; cursor: pointer; font-size: 12px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
         .tab.active { background: #2c5e2e; color: white; }
         .page { display: none; height: calc(100vh - 110px); overflow-y: auto; margin-top: 60px; margin-bottom: 50px; }
-        .page.active { display: flex; }
+        .page.active { display: flex; flex-direction: column; }
         /* Map Page Layout */
-        .map-layout { display: flex; height: 100%; width: 100%; }
+        .map-layout { display: flex; height: 100%; width: 100%; flex: 1; }
         .side-panel {
             width: 280px;
             background: white;
@@ -69,10 +69,7 @@
             box-shadow: 2px 0 8px rgba(0,0,0,0.05);
             z-index: 10;
         }
-        .panel-section {
-            padding: 15px;
-            border-bottom: 1px solid #eee;
-        }
+        .panel-section { padding: 15px; border-bottom: 1px solid #eee; }
         .panel-title {
             font-size: 16px;
             font-weight: bold;
@@ -162,6 +159,7 @@
         .legend-color.farmer { background: #27ae60; }
         .legend-color.center { background: #f39c12; }
         /* Other tabs */
+        .flex-content { width: 100%; padding: 20px; }
         .card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
         .stat-number { font-size: 28px; font-weight: bold; color: #2c5e2e; }
         table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; }
@@ -185,7 +183,6 @@
         .chart-row { display: flex; flex-wrap: wrap; gap: 15px; margin-top: 10px; }
         .chart-box { flex: 1; min-width: 200px; background: white; border-radius: 12px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
         .chart-box canvas { max-height: 200px; width: 100%; }
-        .flex-content { width: 100%; padding: 20px; }
         @media (max-width: 768px) { .side-panel { width: 240px; } .panel-title { font-size: 14px; } }
     </style>
 </head>
@@ -239,6 +236,8 @@
         let map = null;
         let currentTile = null;
         let markers = { factories: [], farmers: [], centers: [] };
+        let pieChart = null;
+        let barCharts = {};
 
         // Login/Logout
         window.doLogin = function() {
@@ -387,28 +386,40 @@
 
         // Carbon charts
         function initCarbonCharts() {
-            const pieCtx = document.getElementById('carbonPieChart')?.getContext('2d');
-            if (pieCtx && !window.carbonPieChart) {
-                window.carbonPieChart = new Chart(pieCtx, {
-                    type: 'pie', data: { labels: ['Hydropower', 'Tea SOC', 'Tree ARR'], datasets: [{ data: [25000,45000,18000], backgroundColor: ['#e74c3c','#4CAF50','#2196F3'] }] },
+            const pieCanvas = document.getElementById('carbonPieChart');
+            if (pieCanvas && !pieChart) {
+                pieChart = new Chart(pieCanvas.getContext('2d'), {
+                    type: 'pie',
+                    data: { labels: ['Hydropower', 'Tea SOC', 'Tree ARR'], datasets: [{ data: [25000,45000,18000], backgroundColor: ['#e74c3c','#4CAF50','#2196F3'] }] },
                     options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'bottom' } } }
                 });
             }
-            ['tier1Chart','tier2Chart','tier3Chart'].forEach((id, i) => {
-                const ctx = document.getElementById(id)?.getContext('2d');
-                if (ctx && !window[id]) {
-                    window[id] = new Chart(ctx, {
-                        type: 'bar', data: { labels: [id === 'tier1Chart' ? 'Hydropower' : id === 'tier2Chart' ? 'Tea SOC' : 'Tree ARR'], datasets: [{ label: 'tCO₂e', data: [id === 'tier1Chart' ? 25000 : id === 'tier2Chart' ? 45000 : 18000], backgroundColor: id === 'tier1Chart' ? '#e74c3c' : id === 'tier2Chart' ? '#4CAF50' : '#2196F3' }] },
+            const tiers = ['tier1Chart', 'tier2Chart', 'tier3Chart'];
+            const labels = ['Hydropower', 'Tea SOC', 'Tree ARR'];
+            const values = [25000,45000,18000];
+            const colors = ['#e74c3c','#4CAF50','#2196F3'];
+            tiers.forEach((id, idx) => {
+                const canvas = document.getElementById(id);
+                if (canvas && !barCharts[id]) {
+                    barCharts[id] = new Chart(canvas.getContext('2d'), {
+                        type: 'bar',
+                        data: { labels: [labels[idx]], datasets: [{ label: 'tCO₂e', data: [values[idx]], backgroundColor: colors[idx] }] },
                         options: { responsive: true, maintainAspectRatio: true, scales: { y: { beginAtZero: true } } }
                     });
                 }
             });
         }
+
         function toggleDashboard() {
             const content = document.getElementById('dashboardContent');
             const icon = document.getElementById('dashboardToggleIcon');
             content.classList.toggle('show');
             icon.innerHTML = content.classList.contains('show') ? '▼' : '▶';
+            // Re-render charts after content becomes visible (fix canvas size)
+            setTimeout(() => {
+                if (pieChart) pieChart.update();
+                Object.values(barCharts).forEach(chart => chart.update());
+            }, 100);
         }
         window.printReport = function() {
             const content = document.getElementById('reportContent').innerHTML;
@@ -484,7 +495,7 @@
 
             // Other admin pages
             if (currentRole === 'admin') {
-                document.getElementById('page-farmers').innerHTML = `<div class="flex-content"><h2>Registered Farmers</h2><div class="card"><table><thead><tr><th>ID</th><th>Name</th><th>Phone</th><th>Acreage</th><th>Zone</th></tr></thead><tbody><tr><td>KTF001234</td><td>James Mwangi</td><td>0712345678</td><td>2.5</td><td>Rukuriri North</td></tr><tr><td>KTF001235</td><td>Mary Wanjiku</td><td>0723456789</td><td>3.2</td><td>Rukuriri North</td></tr><tr><td>KTF001238</td><td>John Kamau</td><td>0756789012</td><td>3.5</td><td>Mungania East</td></tr></tbody></table></div></div>`;
+                document.getElementById('page-farmers').innerHTML = `<div class="flex-content"><h2>Registered Farmers</h2><div class="card"><tr><thead><tr><th>ID</th><th>Name</th><th>Phone</th><th>Acreage</th><th>Zone</th></tr></thead><tbody><tr><td>KTF001234</td><td>James Mwangi</td><td>0712345678</td><td>2.5</td><td>Rukuriri North</td></tr><tr><td>KTF001235</td><td>Mary Wanjiku</td><td>0723456789</td><td>3.2</td><td>Rukuriri North</td></tr><tr><td>KTF001238</td><td>John Kamau</td><td>0756789012</td><td>3.5</td><td>Mungania East</td></tr></tbody></table></div></div>`;
                 document.getElementById('page-farms').innerHTML = `<div class="flex-content"><h2>Tea Estates & Carbon Stocks</h2><div class="card"><h3>Rukuriri Estate</h3><p>2,500 ha | Soil Carbon: 45,000 tCO₂e</p></div><div class="card"><h3>Mungania Estate</h3><p>3,200 ha | Soil Carbon: 58,000 tCO₂e</p></div></div>`;
                 document.getElementById('page-dashboard').innerHTML = `
                     <div class="flex-content">
@@ -500,7 +511,8 @@
                     </div>
                 `;
                 document.getElementById('page-reports').innerHTML = `<div class="flex-content"><h2>Carbon Credit Reports</h2><div id="reportContent"><div class="card"><strong>Credits Issued:</strong> 88,000 tCO₂e</div><div class="card"><strong>Revenue:</strong> $1,426,500</div><div class="card"><strong>Buyers:</strong> Microsoft, Swiss Re</div></div><button class="print-btn" onclick="printReport()"><i class="fas fa-print"></i> Print / PDF</button></div>`;
-                setTimeout(() => initCarbonCharts(), 150);
+                // Wait for DOM to render charts
+                setTimeout(() => initCarbonCharts(), 200);
             } else {
                 // Field clerk pages
                 document.getElementById('page-farmers').innerHTML = `<div class="flex-content"><h2>Assigned Farmers</h2><div class="card"><strong>James Mwangi</strong> – 2.5 acres</div><div class="card"><strong>Mary Wanjiku</strong> – 3.2 acres</div><div class="card"><strong>John Kamau</strong> – 3.5 acres</div></div>`;
