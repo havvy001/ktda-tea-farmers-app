@@ -159,7 +159,6 @@
         .flex-content { width: 100%; padding: 20px; }
         .card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
         .stat-number { font-size: 28px; font-weight: bold; color: #2c5e2e; }
-        /* Improved table styling */
         .data-table {
             width: 100%;
             border-collapse: collapse;
@@ -224,7 +223,7 @@
     </div>
 
     <script>
-        // Data (mock)
+        // Mock data (no backend calls)
         const locations = {
             factories: [
                 { id: 1, name: "Rukuriri Tea Factory", region: "Meru", lat: 0.2345, lng: 37.5678, capacity: 120000 },
@@ -243,7 +242,6 @@
             ]
         };
 
-        let API_BASE = localStorage.getItem('api_base') || '';
         const USERS = {
             admin: { password: 'admin123', role: 'admin', name: 'Administrator' },
             clerk1: { password: 'clerk123', role: 'clerk', name: 'Field Clerk Officer' }
@@ -255,6 +253,12 @@
         let pieChart = null;
         let barCharts = {};
 
+        // Mock deliveries (in-memory)
+        let mockDeliveries = [
+            { farmer: 'James Mwangi', weight: 450, date: '2026-05-14', status: 'Completed' },
+            { farmer: 'Mary Wanjiku', weight: 380, date: '2026-05-13', status: 'Completed' }
+        ];
+
         window.doLogin = function() {
             const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
@@ -265,17 +269,11 @@
                 document.getElementById('appContainer').style.display = 'flex';
                 document.getElementById('userRoleBadge').innerHTML = currentRole === 'admin' ? '<i class="fas fa-user-shield"></i> Admin' : '<i class="fas fa-clipboard-list"></i> Field Clerk Officer';
                 buildUI();
-                if (currentRole === 'clerk' && !API_BASE) {
-                    const url = prompt('Optional: Enter backend API URL (leave empty for mock data)');
-                    if (url && url.startsWith('http')) {
-                        API_BASE = url;
-                        localStorage.setItem('api_base', API_BASE);
-                    }
-                }
             } else {
                 document.getElementById('loginError').innerText = 'Invalid credentials. Use admin/admin123 or clerk1/clerk123';
             }
         };
+
         window.logout = function() {
             document.getElementById('loginOverlay').style.display = 'flex';
             document.getElementById('appContainer').style.display = 'none';
@@ -284,6 +282,7 @@
             currentRole = null;
         };
 
+        // Map functions
         function initMap() {
             if (map) return;
             const container = document.getElementById('map');
@@ -350,52 +349,27 @@
             if (map) map.setView([lat, lng], zoomLevel);
         }
 
-        let mockDeliveries = [
-            { farmer: 'James Mwangi', weight: 450, date: '2026-05-14', status: 'Completed' },
-            { farmer: 'Mary Wanjiku', weight: 380, date: '2026-05-13', status: 'Completed' }
-        ];
-        async function refreshDeliveries() {
+        // Delivery functions (mock only, no API calls)
+        function refreshDeliveries() {
             const container = document.querySelector('#page-delivery .delivery-list');
             if (!container) return;
-            if (!API_BASE) {
-                const html = mockDeliveries.map(d => `<div class="card"><strong>${d.farmer}</strong><br>${d.weight} kg – ${d.date}<br><span class="delivery-status status-completed">${d.status}</span></div>`).join('');
-                container.innerHTML = html || '<div class="card">No deliveries yet</div>';
-                return;
-            }
-            try {
-                const res = await fetch(`${API_BASE}/api/ktda/deliveries?limit=5`);
-                const data = await res.json();
-                if (data.success && data.data) {
-                    const html = data.data.map(d => `<div class="card"><strong>Farmer ${d.farmer_id}</strong><br>${d.green_leaf_kg} kg – ${d.delivery_date}<br><span class="delivery-status status-completed">${d.leaf_grade} grade</span></div>`).join('');
-                    container.innerHTML = html || '<div class="card">No deliveries yet</div>';
-                } else container.innerHTML = '<div class="card">Failed to load deliveries</div>';
-            } catch(e) { container.innerHTML = '<div class="card">Error loading deliveries</div>'; }
+            const html = mockDeliveries.map(d => `<div class="card"><strong>${d.farmer}</strong><br>${d.weight} kg – ${d.date}<br><span class="delivery-status status-completed">${d.status}</span></div>`).join('');
+            container.innerHTML = html || '<div class="card">No deliveries yet</div>';
         }
-        window.submitDelivery = async function() {
+
+        window.submitDelivery = function() {
             const farmer = document.getElementById('deliveryFarmer')?.value;
             const weight = parseFloat(document.getElementById('deliveryWeight')?.value);
             if (!farmer || isNaN(weight) || weight <= 0) { alert('Select farmer and enter valid weight'); return; }
-            if (!API_BASE) {
-                mockDeliveries.unshift({ farmer, weight, date: new Date().toISOString().split('T')[0], status: 'Pending' });
-                refreshDeliveries();
-                alert('Delivery recorded (mock).');
-                document.getElementById('deliveryWeight').value = '';
-                return;
-            }
-            try {
-                const res = await fetch(`${API_BASE}/api/ktda/deliveries`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ farmer_name: farmer, green_leaf_kg: weight, leaf_grade: 'A', delivery_date: new Date().toISOString().split('T')[0] })
-                });
-                const data = await res.json();
-                if (data.success) {
-                    alert('Delivery recorded!');
-                    document.getElementById('deliveryWeight').value = '';
-                    refreshDeliveries();
-                } else alert('Error: ' + data.error);
-            } catch(e) { alert('Connection error'); }
+            // Add to mock array
+            const today = new Date().toISOString().split('T')[0];
+            mockDeliveries.unshift({ farmer, weight, date: today, status: 'Pending' });
+            refreshDeliveries();
+            alert('Delivery recorded (offline mock).');
+            document.getElementById('deliveryWeight').value = '';
         };
 
+        // Carbon charts
         function initCarbonCharts() {
             const pieCanvas = document.getElementById('carbonPieChart');
             if (pieCanvas && !pieChart) {
@@ -470,6 +444,7 @@
                 pageContainer.appendChild(pageDiv);
             });
 
+            // Map page
             document.getElementById('page-map').innerHTML = `
                 <div class="map-layout">
                     <div class="side-panel">
@@ -502,7 +477,6 @@
             setTimeout(() => initMap(), 100);
 
             if (currentRole === 'admin') {
-                // Fixed farmers table with proper borders
                 const farmersTableRows = locations.farmers.map(f => `
                     <tr>
                         <td>${f.number}</td>
@@ -516,9 +490,7 @@
                     <div class="flex-content">
                         <h2>Registered Farmers</h2>
                         <table class="data-table">
-                            <thead>
-                                <tr><th>ID</th><th>Name</th><th>Phone</th><th>Acreage</th><th>Zone</th></tr>
-                            </thead>
+                            <thead><tr><th>ID</th><th>Name</th><th>Phone</th><th>Acreage</th><th>Zone</th></tr></thead>
                             <tbody>${farmersTableRows}</tbody>
                         </table>
                     </div>
@@ -540,9 +512,24 @@
                 document.getElementById('page-reports').innerHTML = `<div class="flex-content"><h2>Carbon Credit Reports</h2><div id="reportContent"><div class="card"><strong>Credits Issued:</strong> 88,000 tCO₂e</div><div class="card"><strong>Revenue:</strong> $1,426,500</div><div class="card"><strong>Buyers:</strong> Microsoft, Swiss Re</div></div><button class="print-btn" onclick="printReport()"><i class="fas fa-print"></i> Print / PDF</button></div>`;
                 setTimeout(() => initCarbonCharts(), 200);
             } else {
+                // Field clerk pages
                 document.getElementById('page-farmers').innerHTML = `<div class="flex-content"><h2>Assigned Farmers</h2><div class="card"><strong>James Mwangi</strong> – 2.5 acres</div><div class="card"><strong>Mary Wanjiku</strong> – 3.2 acres</div><div class="card"><strong>John Kamau</strong> – 3.5 acres</div></div>`;
-                document.getElementById('page-delivery').innerHTML = `<div class="flex-content"><h2>Record Tea Delivery</h2><div class="card"><label>Farmer</label><select id="deliveryFarmer" style="width:100%; padding:8px;"><option>James Mwangi</option><option>Mary Wanjiku</option><option>John Kamau</option></select><label>Weight (kg)</label><input type="number" id="deliveryWeight" style="width:100%; padding:8px; margin-top:5px;"><button class="delivery-submit" onclick="submitDelivery()">Submit Delivery</button></div><div class="delivery-list"></div></div>`;
-                setTimeout(() => refreshDeliveries(), 100);
+                document.getElementById('page-delivery').innerHTML = `
+                    <div class="flex-content">
+                        <h2>Record Tea Delivery</h2>
+                        <div class="card">
+                            <label>Farmer</label>
+                            <select id="deliveryFarmer" style="width:100%; padding:8px;">
+                                <option>James Mwangi</option><option>Mary Wanjiku</option><option>John Kamau</option>
+                            </select>
+                            <label>Weight (kg)</label>
+                            <input type="number" id="deliveryWeight" style="width:100%; padding:8px; margin-top:5px;">
+                            <button class="delivery-submit" onclick="submitDelivery()">Submit Delivery</button>
+                        </div>
+                        <div class="delivery-list"></div>
+                    </div>
+                `;
+                refreshDeliveries();
             }
         }
 
