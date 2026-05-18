@@ -57,7 +57,6 @@
         .tab.active { background: #2c5e2e; color: white; }
         .page { display: none; height: calc(100vh - 110px); overflow-y: auto; margin-top: 60px; margin-bottom: 50px; }
         .page.active { display: flex; flex-direction: column; }
-        /* Map Page Layout */
         .map-layout { display: flex; height: 100%; width: 100%; flex: 1; }
         .side-panel {
             width: 280px;
@@ -97,7 +96,6 @@
         .map-wrapper { flex: 1; position: relative; }
         .map-container { height: 100%; width: 100%; }
         #map { height: 100%; width: 100%; }
-        /* Basemap Switcher with Icons */
         .basemap-wrapper {
             position: absolute;
             top: 10px;
@@ -158,13 +156,31 @@
         .legend-color.factory { background: #e74c3c; }
         .legend-color.farmer { background: #27ae60; }
         .legend-color.center { background: #f39c12; }
-        /* Other tabs */
         .flex-content { width: 100%; padding: 20px; }
         .card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
         .stat-number { font-size: 28px; font-weight: bold; color: #2c5e2e; }
-        table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
-        th { background: #2c5e2e; color: white; }
+        /* Improved table styling */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        .data-table th, .data-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .data-table th {
+            background: #2c5e2e;
+            color: white;
+            font-weight: 600;
+        }
+        .data-table tr:hover {
+            background: #f5f5f5;
+        }
         button.delivery-submit { background: #2c5e2e; color: white; border: none; padding: 10px; border-radius: 8px; width: 100%; margin-top: 10px; cursor: pointer; }
         .print-btn { background: #2196f3; color: white; border: none; padding: 8px 16px; border-radius: 6px; margin-top: 10px; cursor: pointer; }
         .collapsible-header {
@@ -216,9 +232,9 @@
                 { id: 3, name: "Kagwe Tea Factory", region: "Kiambu", lat: -1.1234, lng: 36.8901, capacity: 85000 }
             ],
             farmers: [
-                { id: 1, name: "James Mwangi", number: "KTF001234", acres: 2.5, lat: 0.23, lng: 37.55 },
-                { id: 2, name: "Mary Wanjiku", number: "KTF001235", acres: 3.2, lat: 0.235, lng: 37.552 },
-                { id: 3, name: "John Kamau", number: "KTF001238", acres: 3.5, lat: -0.45, lng: 37.78 }
+                { id: 1, name: "James Mwangi", number: "KTF001234", acres: 2.5, lat: 0.23, lng: 37.55, phone: "0712345678", zone: "Rukuriri North" },
+                { id: 2, name: "Mary Wanjiku", number: "KTF001235", acres: 3.2, lat: 0.235, lng: 37.552, phone: "0723456789", zone: "Rukuriri North" },
+                { id: 3, name: "John Kamau", number: "KTF001238", acres: 3.5, lat: -0.45, lng: 37.78, phone: "0756789012", zone: "Mungania East" }
             ],
             centers: [
                 { id: 1, name: "Kianjai Center", factory: "Rukuriri", lat: 0.245, lng: 37.56, has_weighbridge: true },
@@ -239,7 +255,6 @@
         let pieChart = null;
         let barCharts = {};
 
-        // Login/Logout
         window.doLogin = function() {
             const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
@@ -269,7 +284,6 @@
             currentRole = null;
         };
 
-        // Map functions
         function initMap() {
             if (map) return;
             const container = document.getElementById('map');
@@ -286,7 +300,6 @@
             markers.farmers.forEach(m => map.removeLayer(m));
             markers.centers.forEach(m => map.removeLayer(m));
             markers = { factories: [], farmers: [], centers: [] };
-
             locations.factories.forEach(f => {
                 const marker = L.marker([f.lat, f.lng], {
                     icon: L.divIcon({ html: '<div style="background:#e74c3c; width:12px; height:12px; border-radius:50%; border:2px solid white; box-shadow:0 0 0 1px #ccc;"></div>', iconSize: [12,12] })
@@ -337,7 +350,6 @@
             if (map) map.setView([lat, lng], zoomLevel);
         }
 
-        // Delivery mock
         let mockDeliveries = [
             { farmer: 'James Mwangi', weight: 450, date: '2026-05-14', status: 'Completed' },
             { farmer: 'Mary Wanjiku', weight: 380, date: '2026-05-13', status: 'Completed' }
@@ -384,7 +396,6 @@
             } catch(e) { alert('Connection error'); }
         };
 
-        // Carbon charts
         function initCarbonCharts() {
             const pieCanvas = document.getElementById('carbonPieChart');
             if (pieCanvas && !pieChart) {
@@ -415,7 +426,6 @@
             const icon = document.getElementById('dashboardToggleIcon');
             content.classList.toggle('show');
             icon.innerHTML = content.classList.contains('show') ? '▼' : '▶';
-            // Re-render charts after content becomes visible (fix canvas size)
             setTimeout(() => {
                 if (pieChart) pieChart.update();
                 Object.values(barCharts).forEach(chart => chart.update());
@@ -429,7 +439,6 @@
             win.print();
         };
 
-        // Build UI
         function buildUI() {
             const tabsContainer = document.getElementById('tabsContainer');
             const pageContainer = document.getElementById('pageContainer');
@@ -461,7 +470,6 @@
                 pageContainer.appendChild(pageDiv);
             });
 
-            // Map page (shared for both roles)
             document.getElementById('page-map').innerHTML = `
                 <div class="map-layout">
                     <div class="side-panel">
@@ -493,9 +501,28 @@
             document.getElementById('center-list').innerHTML = locations.centers.map(c => `<div class="list-item" onclick="zoomToLocation(${c.lat}, ${c.lng}, 15)"><div class="item-name">📍 ${c.name}</div><div class="item-detail">Factory: ${c.factory} | Weighbridge: ${c.has_weighbridge ? 'Yes' : 'No'}</div></div>`).join('');
             setTimeout(() => initMap(), 100);
 
-            // Other admin pages
             if (currentRole === 'admin') {
-                document.getElementById('page-farmers').innerHTML = `<div class="flex-content"><h2>Registered Farmers</h2><div class="card"><tr><thead><tr><th>ID</th><th>Name</th><th>Phone</th><th>Acreage</th><th>Zone</th></tr></thead><tbody><tr><td>KTF001234</td><td>James Mwangi</td><td>0712345678</td><td>2.5</td><td>Rukuriri North</td></tr><tr><td>KTF001235</td><td>Mary Wanjiku</td><td>0723456789</td><td>3.2</td><td>Rukuriri North</td></tr><tr><td>KTF001238</td><td>John Kamau</td><td>0756789012</td><td>3.5</td><td>Mungania East</td></tr></tbody></table></div></div>`;
+                // Fixed farmers table with proper borders
+                const farmersTableRows = locations.farmers.map(f => `
+                    <tr>
+                        <td>${f.number}</td>
+                        <td>${f.name}</td>
+                        <td>${f.phone}</td>
+                        <td>${f.acres}</td>
+                        <td>${f.zone}</td>
+                    </tr>
+                `).join('');
+                document.getElementById('page-farmers').innerHTML = `
+                    <div class="flex-content">
+                        <h2>Registered Farmers</h2>
+                        <table class="data-table">
+                            <thead>
+                                <tr><th>ID</th><th>Name</th><th>Phone</th><th>Acreage</th><th>Zone</th></tr>
+                            </thead>
+                            <tbody>${farmersTableRows}</tbody>
+                        </table>
+                    </div>
+                `;
                 document.getElementById('page-farms').innerHTML = `<div class="flex-content"><h2>Tea Estates & Carbon Stocks</h2><div class="card"><h3>Rukuriri Estate</h3><p>2,500 ha | Soil Carbon: 45,000 tCO₂e</p></div><div class="card"><h3>Mungania Estate</h3><p>3,200 ha | Soil Carbon: 58,000 tCO₂e</p></div></div>`;
                 document.getElementById('page-dashboard').innerHTML = `
                     <div class="flex-content">
@@ -511,10 +538,8 @@
                     </div>
                 `;
                 document.getElementById('page-reports').innerHTML = `<div class="flex-content"><h2>Carbon Credit Reports</h2><div id="reportContent"><div class="card"><strong>Credits Issued:</strong> 88,000 tCO₂e</div><div class="card"><strong>Revenue:</strong> $1,426,500</div><div class="card"><strong>Buyers:</strong> Microsoft, Swiss Re</div></div><button class="print-btn" onclick="printReport()"><i class="fas fa-print"></i> Print / PDF</button></div>`;
-                // Wait for DOM to render charts
                 setTimeout(() => initCarbonCharts(), 200);
             } else {
-                // Field clerk pages
                 document.getElementById('page-farmers').innerHTML = `<div class="flex-content"><h2>Assigned Farmers</h2><div class="card"><strong>James Mwangi</strong> – 2.5 acres</div><div class="card"><strong>Mary Wanjiku</strong> – 3.2 acres</div><div class="card"><strong>John Kamau</strong> – 3.5 acres</div></div>`;
                 document.getElementById('page-delivery').innerHTML = `<div class="flex-content"><h2>Record Tea Delivery</h2><div class="card"><label>Farmer</label><select id="deliveryFarmer" style="width:100%; padding:8px;"><option>James Mwangi</option><option>Mary Wanjiku</option><option>John Kamau</option></select><label>Weight (kg)</label><input type="number" id="deliveryWeight" style="width:100%; padding:8px; margin-top:5px;"><button class="delivery-submit" onclick="submitDelivery()">Submit Delivery</button></div><div class="delivery-list"></div></div>`;
                 setTimeout(() => refreshDeliveries(), 100);
