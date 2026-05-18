@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>KTDA GIS – Carbon & Tea Management</title>
+    <title>KTDA GIS – Carbon, Soil & Fertilizer Management</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -52,140 +52,27 @@
         .app-container { display: none; height: 100vh; flex-direction: column; }
         .header { background: #2c5e2e; color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; }
         .header h1 { font-size: 18px; display: flex; align-items: center; gap: 8px; }
-        .tabs { display: flex; background: white; position: fixed; bottom: 0; left: 0; right: 0; z-index: 100; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); }
-        .tab { flex: 1; text-align: center; padding: 10px; cursor: pointer; font-size: 12px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+        .tabs { display: flex; background: white; position: fixed; bottom: 0; left: 0; right: 0; z-index: 100; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); overflow-x: auto; }
+        .tab { flex: 1; text-align: center; padding: 10px; cursor: pointer; font-size: 11px; display: flex; flex-direction: column; align-items: center; gap: 4px; white-space: nowrap; }
         .tab.active { background: #2c5e2e; color: white; }
         .page { display: none; height: calc(100vh - 110px); overflow-y: auto; margin-top: 60px; margin-bottom: 50px; }
         .page.active { display: flex; flex-direction: column; }
-        .map-layout { display: flex; height: 100%; width: 100%; flex: 1; }
-        .side-panel {
-            width: 280px;
-            background: white;
-            border-right: 1px solid #ddd;
-            display: flex;
-            flex-direction: column;
-            overflow-y: auto;
-            box-shadow: 2px 0 8px rgba(0,0,0,0.05);
-            z-index: 10;
-        }
-        .panel-section { padding: 15px; border-bottom: 1px solid #eee; }
-        .panel-title {
-            font-size: 16px;
-            font-weight: bold;
-            color: #2c5e2e;
-            margin-bottom: 10px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding-bottom: 5px;
-            border-bottom: 2px solid #2c5e2e;
-        }
-        .panel-list { max-height: 200px; overflow-y: auto; }
-        .list-item {
-            padding: 8px;
-            margin-bottom: 6px;
-            background: #f9f9f9;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.2s;
-            border-left: 3px solid #2c5e2e;
-        }
-        .list-item:hover { background: #e8f5e9; transform: translateX(3px); }
-        .item-name { font-weight: 600; font-size: 13px; color: #333; }
-        .item-detail { font-size: 11px; color: #666; margin-top: 2px; }
-        .map-wrapper { flex: 1; position: relative; }
-        .map-container { height: 100%; width: 100%; }
-        #map { height: 100%; width: 100%; }
-        .basemap-wrapper {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            z-index: 1000;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-            padding: 5px;
-        }
-        .basemap-btn {
-            background: white;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 12px;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-        .basemap-dropdown {
-            display: none;
-            position: absolute;
-            top: 100%;
-            right: 0;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-            margin-top: 5px;
-            min-width: 140px;
-            z-index: 1001;
-        }
-        .basemap-wrapper.active .basemap-dropdown { display: block; }
-        .basemap-option {
-            padding: 8px 12px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 12px;
-            border-bottom: 1px solid #eee;
-        }
-        .basemap-option:hover { background: #f0f0f0; }
-        .legend {
-            position: absolute;
-            bottom: 20px;
-            right: 10px;
-            background: rgba(255,255,255,0.95);
-            padding: 8px 12px;
-            border-radius: 8px;
-            font-size: 11px;
-            z-index: 1000;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        }
-        .legend-item { display: flex; align-items: center; margin: 3px 0; gap: 6px; }
-        .legend-color { width: 12px; height: 12px; border-radius: 2px; }
-        .legend-color.factory { background: #e74c3c; }
-        .legend-color.farmer { background: #27ae60; }
-        .legend-color.center { background: #f39c12; }
         .flex-content { width: 100%; padding: 20px; }
         .card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .card h3 { margin-bottom: 12px; color: #2c5e2e; }
         .stat-number { font-size: 28px; font-weight: bold; color: #2c5e2e; }
-        .data-table {
-            width: 100%;
-            border-collapse: collapse;
-            background: white;
-            border-radius: 12px;
-            overflow: hidden;
-            margin-top: 10px;
-        }
-        .data-table th, .data-table td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #e0e0e0;
-        }
-        .data-table th {
-            background: #2c5e2e;
-            color: white;
-            font-weight: 600;
-        }
-        .data-table tr:hover {
-            background: #f5f5f5;
-        }
-        button.delivery-submit { background: #2c5e2e; color: white; border: none; padding: 10px; border-radius: 8px; width: 100%; margin-top: 10px; cursor: pointer; }
-        .print-btn { background: #2196f3; color: white; border: none; padding: 8px 16px; border-radius: 6px; margin-top: 10px; cursor: pointer; }
+        .stat-row { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 15px; margin-bottom: 20px; }
+        .stat-card { flex: 1; min-width: 150px; background: white; border-radius: 12px; padding: 15px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .data-table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; margin-top: 10px; }
+        .data-table th, .data-table td { padding: 10px; text-align: left; border-bottom: 1px solid #e0e0e0; }
+        .data-table th { background: #2c5e2e; color: white; }
+        .data-table tr:hover { background: #f5f5f5; }
+        button { background: #2c5e2e; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; margin-top: 10px; }
+        .print-btn { background: #2196f3; }
         .collapsible-header {
             background: #2c5e2e;
             color: white;
-            padding: 12px;
+            padding: 10px;
             cursor: pointer;
             display: flex;
             justify-content: space-between;
@@ -195,10 +82,13 @@
         }
         .collapsible-content { display: none; }
         .collapsible-content.show { display: block; }
-        .chart-row { display: flex; flex-wrap: wrap; gap: 15px; margin-top: 10px; }
-        .chart-box { flex: 1; min-width: 200px; background: white; border-radius: 12px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        .chart-box canvas { max-height: 200px; width: 100%; }
-        @media (max-width: 768px) { .side-panel { width: 240px; } .panel-title { font-size: 14px; } }
+        .map-container { height: 400px; border-radius: 12px; overflow: hidden; margin-bottom: 15px; }
+        #map, .sample-map { height: 100%; width: 100%; background: #e8f5e9; }
+        .legend { display: flex; gap: 15px; margin-top: 10px; flex-wrap: wrap; font-size: 12px; }
+        .legend-color { width: 14px; height: 14px; display: inline-block; margin-right: 5px; border-radius: 3px; }
+        .nutrient-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; }
+        .nutrient-card { flex: 1; min-width: 100px; background: #f9f9f9; border-radius: 8px; padding: 10px; text-align: center; }
+        @media (max-width: 768px) { .stat-card { min-width: 120px; } .tab { font-size: 10px; } }
     </style>
 </head>
 <body>
@@ -215,7 +105,7 @@
 
     <div id="appContainer" class="app-container">
         <div class="header">
-            <h1><i class="fas fa-leaf"></i> KTDA GIS</h1>
+            <h1><i class="fas fa-leaf"></i> KTDA GIS – Carbon & Soil</h1>
             <div><span id="userRoleBadge"></span> <button onclick="logout()" style="background:none; border:none; color:white;"><i class="fas fa-sign-out-alt"></i></button></div>
         </div>
         <div class="tabs" id="tabsContainer"></div>
@@ -223,57 +113,45 @@
     </div>
 
     <script>
-        // Mock data (no backend calls)
-        const locations = {
-            factories: [
-                { id: 1, name: "Rukuriri Tea Factory", region: "Meru", lat: 0.2345, lng: 37.5678, capacity: 120000 },
-                { id: 2, name: "Mungania Tea Factory", region: "Embu", lat: -0.4567, lng: 37.7890, capacity: 95000 },
-                { id: 3, name: "Kagwe Tea Factory", region: "Kiambu", lat: -1.1234, lng: 36.8901, capacity: 85000 }
-            ],
-            farmers: [
-                { id: 1, name: "James Mwangi", number: "KTF001234", acres: 2.5, lat: 0.23, lng: 37.55, phone: "0712345678", zone: "Rukuriri North" },
-                { id: 2, name: "Mary Wanjiku", number: "KTF001235", acres: 3.2, lat: 0.235, lng: 37.552, phone: "0723456789", zone: "Rukuriri North" },
-                { id: 3, name: "John Kamau", number: "KTF001238", acres: 3.5, lat: -0.45, lng: 37.78, phone: "0756789012", zone: "Mungania East" }
-            ],
-            centers: [
-                { id: 1, name: "Kianjai Center", factory: "Rukuriri", lat: 0.245, lng: 37.56, has_weighbridge: true },
-                { id: 2, name: "Ntharene Center", factory: "Rukuriri", lat: 0.235, lng: 37.55, has_weighbridge: false },
-                { id: 3, name: "Kianyaga Center", factory: "Mungania", lat: -0.446, lng: 37.79, has_weighbridge: true }
-            ]
-        };
-
-        const USERS = {
-            admin: { password: 'admin123', role: 'admin', name: 'Administrator' },
-            clerk1: { password: 'clerk123', role: 'clerk', name: 'Field Clerk Officer' }
-        };
+        const USERS = { admin: { password: 'admin123', role: 'admin' }, clerk1: { password: 'clerk123', role: 'clerk' } };
         let currentRole = null;
         let map = null;
-        let currentTile = null;
-        let markers = { factories: [], farmers: [], centers: [] };
-        let pieChart = null;
-        let barCharts = {};
 
-        // Mock deliveries (in-memory)
-        let mockDeliveries = [
-            { farmer: 'James Mwangi', weight: 450, date: '2026-05-14', status: 'Completed' },
-            { farmer: 'Mary Wanjiku', weight: 380, date: '2026-05-13', status: 'Completed' }
+        // Mock data
+        let carbonProjects = [
+            { id: 1, name: "Rukuriri SOC Pilot", methodology: "VM0042", startDate: "2025-01-01", areaHa: 2500, estCredits: 12500, status: "Registered", issued: 0 },
+            { id: 2, name: "Mungania Tree ARR", methodology: "VM0047", startDate: "2025-03-15", areaHa: 1200, estCredits: 4800, status: "Pending", issued: 0 }
+        ];
+        let soilSamples = [
+            { id: 1, lat: 0.23, lng: 37.55, oc: 2.5, ph: 6.2, n: 180, p: 22, k: 150 },
+            { id: 2, lat: 0.235, lng: 37.552, oc: 3.1, ph: 6.5, n: 210, p: 28, k: 165 },
+            { id: 3, lat: -0.45, lng: 37.78, oc: 1.8, ph: 5.8, n: 140, p: 15, k: 110 }
+        ];
+        let fertilizerDistributions = [
+            { id: 1, farmer: "James Mwangi", type: "NPK 25:5:5", qty: 50, date: "2026-05-10", status: "Delivered" },
+            { id: 2, farmer: "Mary Wanjiku", type: "CAN", qty: 40, date: "2026-05-12", status: "Delivered" }
+        ];
+        let fertilizerInventory = [
+            { type: "NPK 25:5:5", stock: 1200, unit: "kg" },
+            { type: "CAN", stock: 800, unit: "kg" },
+            { type: "Urea", stock: 600, unit: "kg" },
+            { type: "Potassium Sulphate", stock: 400, unit: "kg" },
+            { type: "Organic Fertilizer", stock: 2000, unit: "kg" }
         ];
 
         window.doLogin = function() {
             const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
-            const user = USERS[username];
-            if (user && user.password === password) {
-                currentRole = user.role;
+            if (USERS[username] && USERS[username].password === password) {
+                currentRole = USERS[username].role;
                 document.getElementById('loginOverlay').style.display = 'none';
                 document.getElementById('appContainer').style.display = 'flex';
-                document.getElementById('userRoleBadge').innerHTML = currentRole === 'admin' ? '<i class="fas fa-user-shield"></i> Admin' : '<i class="fas fa-clipboard-list"></i> Field Clerk Officer';
+                document.getElementById('userRoleBadge').innerHTML = currentRole === 'admin' ? '<i class="fas fa-user-shield"></i> Admin' : '<i class="fas fa-clipboard-list"></i> Field Clerk';
                 buildUI();
             } else {
                 document.getElementById('loginError').innerText = 'Invalid credentials. Use admin/admin123 or clerk1/clerk123';
             }
         };
-
         window.logout = function() {
             document.getElementById('loginOverlay').style.display = 'flex';
             document.getElementById('appContainer').style.display = 'none';
@@ -282,153 +160,103 @@
             currentRole = null;
         };
 
-        // Map functions
         function initMap() {
             if (map) return;
-            const container = document.getElementById('map');
-            if (!container) return;
             map = L.map('map').setView([0.5, 36.5], 8);
-            currentTile = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-                attribution: '© OpenStreetMap, CartoDB'
-            }).addTo(map);
-            addAllMarkers();
-        }
-
-        function addAllMarkers() {
-            markers.factories.forEach(m => map.removeLayer(m));
-            markers.farmers.forEach(m => map.removeLayer(m));
-            markers.centers.forEach(m => map.removeLayer(m));
-            markers = { factories: [], farmers: [], centers: [] };
-            locations.factories.forEach(f => {
-                const marker = L.marker([f.lat, f.lng], {
-                    icon: L.divIcon({ html: '<div style="background:#e74c3c; width:12px; height:12px; border-radius:50%; border:2px solid white; box-shadow:0 0 0 1px #ccc;"></div>', iconSize: [12,12] })
-                }).addTo(map);
-                marker.bindPopup(`<b>🏭 ${f.name}</b><br>Region: ${f.region}<br>Capacity: ${f.capacity.toLocaleString()} kg/day`);
-                markers.factories.push(marker);
-            });
-            locations.farmers.forEach(f => {
-                const marker = L.marker([f.lat, f.lng], {
-                    icon: L.divIcon({ html: '<div style="background:#27ae60; width:12px; height:12px; border-radius:50%; border:2px solid white; box-shadow:0 0 0 1px #ccc;"></div>', iconSize: [12,12] })
-                }).addTo(map);
-                marker.bindPopup(`<b>👤 ${f.name}</b><br>ID: ${f.number}<br>${f.acres} acres`);
-                markers.farmers.push(marker);
-            });
-            locations.centers.forEach(c => {
-                const marker = L.marker([c.lat, c.lng], {
-                    icon: L.divIcon({ html: '<div style="background:#f39c12; width:12px; height:12px; border-radius:50%; border:2px solid white; box-shadow:0 0 0 1px #ccc;"></div>', iconSize: [12,12] })
-                }).addTo(map);
-                marker.bindPopup(`<b>📍 ${c.name}</b><br>Factory: ${c.factory}<br>Weighbridge: ${c.has_weighbridge ? 'Yes' : 'No'}`);
-                markers.centers.push(marker);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '© OpenStreetMap' }).addTo(map);
+            // Add sample markers for soil sampling points
+            soilSamples.forEach(s => {
+                L.marker([s.lat, s.lng]).addTo(map).bindPopup(`<b>Sample ${s.id}</b><br>OC: ${s.oc}%<br>pH: ${s.ph}`);
             });
         }
 
-        function setBasemap(type) {
-            let url;
-            switch(type) {
-                case 'satellite': url = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'; break;
-                case 'terrain': url = 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png'; break;
-                case 'dark': url = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'; break;
-                default: url = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
-            }
-            map.removeLayer(currentTile);
-            currentTile = L.tileLayer(url, { attribution: '© OpenStreetMap' }).addTo(map);
-            document.querySelector('.basemap-wrapper').classList.remove('active');
+        function initSoilMap() {
+            const container = document.getElementById('soil-map');
+            if (!container || map) return;
+            const soilMap = L.map('soil-map').setView([0.5, 36.5], 8);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(soilMap);
+            soilSamples.forEach(s => {
+                const color = s.oc > 2.5 ? '#4CAF50' : (s.oc > 1.5 ? '#FF9800' : '#f44336');
+                L.marker([s.lat, s.lng], { icon: L.divIcon({ html: `<div style="background:${color}; width:12px; height:12px; border-radius:50%; border:2px solid white;"></div>`, iconSize: [12,12] }) }).addTo(soilMap)
+                    .bindPopup(`<b>OC: ${s.oc}%</b><br>pH: ${s.ph}<br>N: ${s.n} mg/kg`);
+            });
         }
 
-        function toggleBasemap() {
-            const wrapper = document.querySelector('.basemap-wrapper');
-            wrapper.classList.toggle('active');
-        }
-        document.addEventListener('click', function(e) {
-            if (!e.target.closest('.basemap-wrapper')) {
-                document.querySelector('.basemap-wrapper')?.classList.remove('active');
-            }
-        });
-
-        function zoomToLocation(lat, lng, zoomLevel = 14) {
-            if (map) map.setView([lat, lng], zoomLevel);
-        }
-
-        // Delivery functions (mock only, no API calls)
-        function refreshDeliveries() {
-            const container = document.querySelector('#page-delivery .delivery-list');
-            if (!container) return;
-            const html = mockDeliveries.map(d => `<div class="card"><strong>${d.farmer}</strong><br>${d.weight} kg – ${d.date}<br><span class="delivery-status status-completed">${d.status}</span></div>`).join('');
-            container.innerHTML = html || '<div class="card">No deliveries yet</div>';
-        }
-
-        window.submitDelivery = function() {
-            const farmer = document.getElementById('deliveryFarmer')?.value;
-            const weight = parseFloat(document.getElementById('deliveryWeight')?.value);
-            if (!farmer || isNaN(weight) || weight <= 0) { alert('Select farmer and enter valid weight'); return; }
-            // Add to mock array
-            const today = new Date().toISOString().split('T')[0];
-            mockDeliveries.unshift({ farmer, weight, date: today, status: 'Pending' });
-            refreshDeliveries();
-            alert('Delivery recorded (offline mock).');
-            document.getElementById('deliveryWeight').value = '';
-        };
-
-        // Carbon charts
-        function initCarbonCharts() {
-            const pieCanvas = document.getElementById('carbonPieChart');
-            if (pieCanvas && !pieChart) {
-                pieChart = new Chart(pieCanvas.getContext('2d'), {
-                    type: 'pie',
-                    data: { labels: ['Hydropower', 'Tea SOC', 'Tree ARR'], datasets: [{ data: [25000,45000,18000], backgroundColor: ['#e74c3c','#4CAF50','#2196F3'] }] },
-                    options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'bottom' } } }
+        function registerCarbonProject() {
+            const name = prompt("Project name:");
+            const area = prompt("Area (hectares):");
+            if (name && area) {
+                const newId = carbonProjects.length + 1;
+                carbonProjects.push({
+                    id: newId, name, methodology: "VM0042", startDate: new Date().toISOString().split('T')[0],
+                    areaHa: parseFloat(area), estCredits: parseFloat(area) * 5, status: "Pending", issued: 0
                 });
+                alert("Project registered!");
+                refreshCarbonTable();
             }
-            const tiers = ['tier1Chart', 'tier2Chart', 'tier3Chart'];
-            const labels = ['Hydropower', 'Tea SOC', 'Tree ARR'];
-            const values = [25000,45000,18000];
-            const colors = ['#e74c3c','#4CAF50','#2196F3'];
-            tiers.forEach((id, idx) => {
-                const canvas = document.getElementById(id);
-                if (canvas && !barCharts[id]) {
-                    barCharts[id] = new Chart(canvas.getContext('2d'), {
-                        type: 'bar',
-                        data: { labels: [labels[idx]], datasets: [{ label: 'tCO₂e', data: [values[idx]], backgroundColor: colors[idx] }] },
-                        options: { responsive: true, maintainAspectRatio: true, scales: { y: { beginAtZero: true } } }
-                    });
-                }
-            });
         }
 
-        function toggleDashboard() {
-            const content = document.getElementById('dashboardContent');
-            const icon = document.getElementById('dashboardToggleIcon');
-            content.classList.toggle('show');
-            icon.innerHTML = content.classList.contains('show') ? '▼' : '▶';
-            setTimeout(() => {
-                if (pieChart) pieChart.update();
-                Object.values(barCharts).forEach(chart => chart.update());
-            }, 100);
+        function issueCredits(projectId) {
+            const project = carbonProjects.find(p => p.id === projectId);
+            if (project && project.status === "Registered") {
+                const credits = project.estCredits;
+                project.issued = credits;
+                alert(`${credits} credits issued for ${project.name}`);
+                refreshCarbonTable();
+            } else {
+                alert("Project not yet registered or already issued.");
+            }
         }
-        window.printReport = function() {
-            const content = document.getElementById('reportContent').innerHTML;
-            const win = window.open();
-            win.document.write(`<html><head><title>KTDA Report</title><style>body{font-family:Arial;padding:20px;}</style></head><body>${content}<p>Generated ${new Date().toLocaleString()}</p></body></html>`);
-            win.document.close();
-            win.print();
-        };
+
+        function refreshCarbonTable() {
+            const tbody = document.querySelector('#carbon-table tbody');
+            if (tbody) {
+                tbody.innerHTML = carbonProjects.map(p => `
+                    <tr>
+                        <td>${p.name}</td><td>${p.methodology}</td><td>${p.startDate}</td><td>${p.areaHa}</td>
+                        <td>${p.estCredits}</td><td>${p.status}</td><td>${p.issued > 0 ? p.issued : '-'}</td>
+                        <td>${p.status === 'Registered' && p.issued === 0 ? `<button onclick="issueCredits(${p.id})">Issue Credits</button>` : 'Issued'}</td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        function distributeFertilizer() {
+            const farmer = prompt("Farmer name:");
+            const type = prompt("Fertilizer type (NPK, CAN, Urea, etc.):");
+            const qty = prompt("Quantity (kg):");
+            if (farmer && type && qty) {
+                const newDist = { id: fertilizerDistributions.length+1, farmer, type, qty: parseFloat(qty), date: new Date().toISOString().split('T')[0], status: "Delivered" };
+                fertilizerDistributions.push(newDist);
+                alert("Distribution recorded.");
+                refreshFertilizerTable();
+            }
+        }
+
+        function refreshFertilizerTable() {
+            const tbody = document.querySelector('#fertilizer-table tbody');
+            if (tbody) {
+                tbody.innerHTML = fertilizerDistributions.map(d => `
+                    <tr><td>${d.farmer}</td><td>${d.type}</td><td>${d.qty} kg</td><td>${d.date}</td><td>${d.status}</td></tr>
+                `).join('');
+            }
+        }
 
         function buildUI() {
             const tabsContainer = document.getElementById('tabsContainer');
             const pageContainer = document.getElementById('pageContainer');
             tabsContainer.innerHTML = '';
             pageContainer.innerHTML = '';
-            let tabs = currentRole === 'admin' ? [
+
+            let tabs = [
                 { id: 'map', label: '🗺️ Map', icon: 'map' },
+                { id: 'carbon', label: '🌿 Carbon Credits', icon: 'leaf' },
+                { id: 'soil', label: '🌱 Soil Nutrition', icon: 'seedling' },
+                { id: 'fertilizer', label: '💊 Fertilizer Assets', icon: 'truck' },
                 { id: 'farmers', label: '👨‍🌾 Farmers', icon: 'users' },
-                { id: 'farms', label: '🌾 Farms', icon: 'tractor' },
-                { id: 'dashboard', label: '📊 Dashboard', icon: 'chart-line' },
-                { id: 'reports', label: '📈 Reports', icon: 'file-alt' }
-            ] : [
-                { id: 'map', label: '🗺️ Map', icon: 'map' },
-                { id: 'farmers', label: '👨‍🌾 Farmers', icon: 'users' },
-                { id: 'delivery', label: '🚚 Delivery', icon: 'truck' }
+                { id: 'reports', label: '📄 Reports', icon: 'file-alt' }
             ];
+
             tabs.forEach((tab, idx) => {
                 const btn = document.createElement('div');
                 btn.className = 'tab';
@@ -439,109 +267,76 @@
                 const pageDiv = document.createElement('div');
                 pageDiv.id = `page-${tab.id}`;
                 pageDiv.className = 'page';
+                pageDiv.innerHTML = getPageContent(tab.id);
                 if (idx !== 0) pageDiv.classList.remove('active');
                 else pageDiv.classList.add('active');
                 pageContainer.appendChild(pageDiv);
             });
 
-            // Map page
-            document.getElementById('page-map').innerHTML = `
-                <div class="map-layout">
-                    <div class="side-panel">
-                        <div class="panel-section"><div class="panel-title"><i class="fas fa-industry"></i> Factories</div><div class="panel-list" id="factory-list"></div></div>
-                        <div class="panel-section"><div class="panel-title"><i class="fas fa-user"></i> Farmers</div><div class="panel-list" id="farmer-list"></div></div>
-                        <div class="panel-section"><div class="panel-title"><i class="fas fa-store"></i> Buying Centers</div><div class="panel-list" id="center-list"></div></div>
-                    </div>
-                    <div class="map-wrapper">
-                        <div class="map-container"><div id="map"></div></div>
-                        <div class="basemap-wrapper">
-                            <button class="basemap-btn" onclick="toggleBasemap()">🗺️ Basemap ▼</button>
-                            <div class="basemap-dropdown">
-                                <div class="basemap-option" onclick="setBasemap('street')"><i class="fas fa-road"></i> Street</div>
-                                <div class="basemap-option" onclick="setBasemap('satellite')"><i class="fas fa-satellite"></i> Satellite</div>
-                                <div class="basemap-option" onclick="setBasemap('terrain')"><i class="fas fa-mountain"></i> Terrain</div>
-                                <div class="basemap-option" onclick="setBasemap('dark')"><i class="fas fa-moon"></i> Dark</div>
-                            </div>
-                        </div>
-                        <div class="legend">
-                            <div class="legend-item"><div class="legend-color factory"></div> Factories</div>
-                            <div class="legend-item"><div class="legend-color farmer"></div> Farmers</div>
-                            <div class="legend-item"><div class="legend-color center"></div> Buying Centers</div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            document.getElementById('factory-list').innerHTML = locations.factories.map(f => `<div class="list-item" onclick="zoomToLocation(${f.lat}, ${f.lng}, 12)"><div class="item-name">🏭 ${f.name}</div><div class="item-detail">${f.region} | ${f.capacity.toLocaleString()} kg/day</div></div>`).join('');
-            document.getElementById('farmer-list').innerHTML = locations.farmers.map(f => `<div class="list-item" onclick="zoomToLocation(${f.lat}, ${f.lng}, 14)"><div class="item-name">👤 ${f.name}</div><div class="item-detail">${f.number} | ${f.acres} acres</div></div>`).join('');
-            document.getElementById('center-list').innerHTML = locations.centers.map(c => `<div class="list-item" onclick="zoomToLocation(${c.lat}, ${c.lng}, 15)"><div class="item-name">📍 ${c.name}</div><div class="item-detail">Factory: ${c.factory} | Weighbridge: ${c.has_weighbridge ? 'Yes' : 'No'}</div></div>`).join('');
-            setTimeout(() => initMap(), 100);
+            if (document.getElementById('map')) initMap();
+            if (document.getElementById('soil-map')) initSoilMap();
+            refreshCarbonTable();
+            refreshFertilizerTable();
+        }
 
-            if (currentRole === 'admin') {
-                const farmersTableRows = locations.farmers.map(f => `
-                    <tr>
-                        <td>${f.number}</td>
-                        <td>${f.name}</td>
-                        <td>${f.phone}</td>
-                        <td>${f.acres}</td>
-                        <td>${f.zone}</td>
-                    </tr>
-                `).join('');
-                document.getElementById('page-farmers').innerHTML = `
-                    <div class="flex-content">
-                        <h2>Registered Farmers</h2>
-                        <table class="data-table">
-                            <thead><tr><th>ID</th><th>Name</th><th>Phone</th><th>Acreage</th><th>Zone</th></tr></thead>
-                            <tbody>${farmersTableRows}</tbody>
+        function getPageContent(pageId) {
+            if (pageId === 'map') return `
+                <div class="flex-content">
+                    <div class="map-container"><div id="map"></div></div>
+                    <div class="legend"><div><span class="legend-color" style="background:#e74c3c;"></span> Factories</div><div><span class="legend-color" style="background:#27ae60;"></span> Farmers</div><div><span class="legend-color" style="background:#f39c12;"></span> Soil Sample Points</div></div>
+                </div>`;
+            if (pageId === 'carbon') return `
+                <div class="flex-content">
+                    <div class="stat-row">
+                        <div class="stat-card"><div class="stat-number">88,000</div><div>Total Carbon Stock (tCO₂e)</div></div>
+                        <div class="stat-card"><div class="stat-number">5,200</div><div>Annual Sequestration (tCO₂e)</div></div>
+                        <div class="stat-card"><div class="stat-number">$1.43M</div><div>Estimated Credit Revenue</div></div>
+                        <div class="stat-card"><div class="stat-number">12,500</div><div>Credits Issued to Date</div></div>
+                    </div>
+                    <div class="card">
+                        <h3>Register New Carbon Project</h3>
+                        <button onclick="registerCarbonProject()">+ Register Project</button>
+                    </div>
+                    <div class="card">
+                        <h3>Carbon Asset Register</h3>
+                        <table class="data-table" id="carbon-table">
+                            <thead><tr><th>Project Name</th><th>Methodology</th><th>Start Date</th><th>Area (ha)</th><th>Est. Credits</th><th>Status</th><th>Issued</th><th>Action</th></tr></thead>
+                            <tbody></tbody>
                         </table>
                     </div>
-                `;
-                document.getElementById('page-farms').innerHTML = `<div class="flex-content"><h2>Tea Estates & Carbon Stocks</h2><div class="card"><h3>Rukuriri Estate</h3><p>2,500 ha | Soil Carbon: 45,000 tCO₂e</p></div><div class="card"><h3>Mungania Estate</h3><p>3,200 ha | Soil Carbon: 58,000 tCO₂e</p></div></div>`;
-                document.getElementById('page-dashboard').innerHTML = `
-                    <div class="flex-content">
-                        <div class="collapsible-header" onclick="toggleDashboard()"><span><i class="fas fa-chart-pie"></i> Carbon Analytics</span><span id="dashboardToggleIcon">▼</span></div>
-                        <div id="dashboardContent" class="collapsible-content show">
-                            <div class="chart-row">
-                                <div class="chart-box"><canvas id="carbonPieChart" width="300" height="200"></canvas></div>
-                                <div class="chart-box"><h4>Hydropower</h4><canvas id="tier1Chart" width="300" height="150"></canvas></div>
-                                <div class="chart-box"><h4>Tea SOC</h4><canvas id="tier2Chart" width="300" height="150"></canvas></div>
-                                <div class="chart-box"><h4>Tree ARR</h4><canvas id="tier3Chart" width="300" height="150"></canvas></div>
-                            </div>
-                        </div>
+                </div>`;
+            if (pageId === 'soil') return `
+                <div class="flex-content">
+                    <div class="map-container"><div id="soil-map"></div></div>
+                    <div class="nutrient-grid">
+                        <div class="nutrient-card"><strong>Organic Carbon</strong><br>2.5% (avg)</div>
+                        <div class="nutrient-card"><strong>pH</strong><br>6.2 (optimal)</div>
+                        <div class="nutrient-card"><strong>Nitrogen</strong><br>180 mg/kg</div>
+                        <div class="nutrient-card"><strong>Phosphorus</strong><br>22 mg/kg</div>
+                        <div class="nutrient-card"><strong>Potassium</strong><br>150 mg/kg</div>
+                        <div class="nutrient-card"><strong>SOC Stock</strong><br>45 tCO₂e/ha</div>
                     </div>
-                `;
-                document.getElementById('page-reports').innerHTML = `<div class="flex-content"><h2>Carbon Credit Reports</h2><div id="reportContent"><div class="card"><strong>Credits Issued:</strong> 88,000 tCO₂e</div><div class="card"><strong>Revenue:</strong> $1,426,500</div><div class="card"><strong>Buyers:</strong> Microsoft, Swiss Re</div></div><button class="print-btn" onclick="printReport()"><i class="fas fa-print"></i> Print / PDF</button></div>`;
-                setTimeout(() => initCarbonCharts(), 200);
-            } else {
-                // Field clerk pages
-                document.getElementById('page-farmers').innerHTML = `<div class="flex-content"><h2>Assigned Farmers</h2><div class="card"><strong>James Mwangi</strong> – 2.5 acres</div><div class="card"><strong>Mary Wanjiku</strong> – 3.2 acres</div><div class="card"><strong>John Kamau</strong> – 3.5 acres</div></div>`;
-                document.getElementById('page-delivery').innerHTML = `
-                    <div class="flex-content">
-                        <h2>Record Tea Delivery</h2>
-                        <div class="card">
-                            <label>Farmer</label>
-                            <select id="deliveryFarmer" style="width:100%; padding:8px;">
-                                <option>James Mwangi</option><option>Mary Wanjiku</option><option>John Kamau</option>
-                            </select>
-                            <label>Weight (kg)</label>
-                            <input type="number" id="deliveryWeight" style="width:100%; padding:8px; margin-top:5px;">
-                            <button class="delivery-submit" onclick="submitDelivery()">Submit Delivery</button>
-                        </div>
-                        <div class="delivery-list"></div>
-                    </div>
-                `;
-                refreshDeliveries();
-            }
+                    <div class="card"><h3>Fertilizer Recommendations</h3><p>Based on soil tests, apply NPK 25:5:5 at 200 kg/ha in zones with OC < 2%. In high‑OC zones, reduce nitrogen by 20%.</p></div>
+                </div>`;
+            if (pageId === 'fertilizer') return `
+                <div class="flex-content">
+                    <div class="card"><h3>Record Fertilizer Distribution</h3><button onclick="distributeFertilizer()">+ Record Distribution</button></div>
+                    <div class="card"><h3>Inventory Status</h3><table class="data-table"><thead><tr><th>Fertilizer Type</th><th>Stock (kg)</th></tr></thead><tbody>${fertilizerInventory.map(i => `<tr><td>${i.type}</td><td>${i.stock}</td></tr>`).join('')}</tbody></table></div>
+                    <div class="card"><h3>Farmer Fertilizer Asset Register</h3><table class="data-table" id="fertilizer-table"><thead><tr><th>Farmer</th><th>Type</th><th>Quantity</th><th>Date</th><th>Status</th></tr></thead><tbody>${fertilizerDistributions.map(d => `<tr><td>${d.farmer}</td><td>${d.type}</td><td>${d.qty} kg</td><td>${d.date}</td><td>${d.status}</td></tr>`).join('')}</tbody></table></div>
+                </div>`;
+            if (pageId === 'farmers') return `<div class="flex-content"><h2>Registered Farmers</h2><table class="data-table"><thead><tr><th>ID</th><th>Name</th><th>Phone</th><th>Acreage</th><th>Zone</th></tr></thead><tbody><tr><td>KTF001234</td><td>James Mwangi</td><td>0712345678</td><td>2.5</td><td>Rukuriri North</td></tr><tr><td>KTF001235</td><td>Mary Wanjiku</td><td>0723456789</td><td>3.2</td><td>Rukuriri North</td></tr><tr><td>KTF001238</td><td>John Kamau</td><td>0756789012</td><td>3.5</td><td>Mungania East</td></tr></tbody></table></div>`;
+            if (pageId === 'reports') return `<div class="flex-content"><h2>Carbon & Fertilizer Reports</h2><div class="card"><strong>Carbon credits issued:</strong> 12,500 tCO₂e<br><strong>Fertilizer distributed (2026):</strong> 2,450 kg<br><button class="print-btn" onclick="window.print()">Print Report</button></div></div>`;
+            return '';
         }
 
         function showPage(pageId) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            const activePage = document.getElementById(`page-${pageId}`);
-            if (activePage) activePage.classList.add('active');
+            document.getElementById(`page-${pageId}`).classList.add('active');
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             const activeTab = Array.from(document.querySelectorAll('.tab')).find(t => t.innerText.toLowerCase().includes(pageId));
             if (activeTab) activeTab.classList.add('active');
             if (pageId === 'map' && map) setTimeout(() => map.invalidateSize(), 100);
-            if (pageId === 'delivery' && currentRole === 'clerk') refreshDeliveries();
+            if (pageId === 'soil' && !window.soilMapInit) { initSoilMap(); window.soilMapInit = true; }
         }
     </script>
 </body>
