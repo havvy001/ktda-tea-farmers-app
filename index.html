@@ -52,8 +52,8 @@
         .app-container { display: none; height: 100vh; flex-direction: column; }
         .header { background: #2c5e2e; color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; }
         .header h1 { font-size: 18px; display: flex; align-items: center; gap: 8px; }
-        .tabs { display: flex; background: white; position: fixed; bottom: 0; left: 0; right: 0; z-index: 100; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); overflow-x: auto; }
-        .tab { flex: 1; text-align: center; padding: 10px; cursor: pointer; font-size: 11px; display: flex; flex-direction: column; align-items: center; gap: 4px; white-space: nowrap; }
+        .tabs { display: flex; background: white; position: fixed; bottom: 0; left: 0; right: 0; z-index: 100; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); }
+        .tab { flex: 1; text-align: center; padding: 10px; cursor: pointer; font-size: 12px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
         .tab.active { background: #2c5e2e; color: white; }
         .page { display: none; height: calc(100vh - 110px); overflow-y: auto; margin-top: 60px; margin-bottom: 50px; }
         .page.active { display: flex; flex-direction: column; }
@@ -67,179 +67,205 @@
         .data-table th, .data-table td { padding: 10px; text-align: left; border-bottom: 1px solid #e0e0e0; }
         .data-table th { background: #2c5e2e; color: white; }
         .data-table tr:hover { background: #f5f5f5; }
-        button { background: #2c5e2e; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; margin-top: 10px; }
+        button, .action-btn { background: #2c5e2e; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; margin: 5px; }
         .print-btn { background: #2196f3; }
-        .collapsible-header {
-            background: #2c5e2e;
-            color: white;
-            padding: 10px;
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-radius: 8px;
-            margin-bottom: 10px;
-        }
-        .collapsible-content { display: none; }
-        .collapsible-content.show { display: block; }
+        .three-dot-menu { position: relative; display: inline-block; }
+        .three-dot-content { display: none; position: absolute; right: 0; background: white; min-width: 200px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); border-radius: 8px; z-index: 100; }
+        .three-dot-content a { color: #333; padding: 12px 16px; text-decoration: none; display: block; cursor: pointer; }
+        .three-dot-content a:hover { background: #f0f0f0; }
+        .show { display: block; }
         .map-container { height: 400px; border-radius: 12px; overflow: hidden; margin-bottom: 15px; }
         #map, .sample-map { height: 100%; width: 100%; background: #e8f5e9; }
         .legend { display: flex; gap: 15px; margin-top: 10px; flex-wrap: wrap; font-size: 12px; }
         .legend-color { width: 14px; height: 14px; display: inline-block; margin-right: 5px; border-radius: 3px; }
-        .nutrient-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; }
-        .nutrient-card { flex: 1; min-width: 100px; background: #f9f9f9; border-radius: 8px; padding: 10px; text-align: center; }
-        @media (max-width: 768px) { .stat-card { min-width: 120px; } .tab { font-size: 10px; } }
+        .records-grid { display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; margin-top: 20px; }
+        .record-card { background: white; border-radius: 12px; padding: 25px; text-align: center; width: 200px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: transform 0.2s; }
+        .record-card:hover { transform: translateY(-5px); background: #e8f5e9; }
+        .record-icon { font-size: 48px; margin-bottom: 10px; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center; }
+        .modal-content { background: white; border-radius: 16px; padding: 20px; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .close-modal { font-size: 24px; cursor: pointer; }
+        input, select, textarea { width: 100%; padding: 8px; margin: 8px 0; border: 1px solid #ddd; border-radius: 6px; }
+        @media (max-width: 768px) { .stat-card { min-width: 120px; } .record-card { width: 160px; } }
     </style>
 </head>
 <body>
     <div id="loginOverlay" class="login-overlay">
         <div class="login-card">
             <h2>🌍 KTDA GIS</h2>
-            <input type="text" id="username" placeholder="Username" autocomplete="off">
-            <input type="password" id="password" placeholder="Password" autocomplete="off">
+            <input type="text" id="username" placeholder="Username">
+            <input type="password" id="password" placeholder="Password">
             <button onclick="doLogin()">Login</button>
             <div id="loginError" class="error-msg"></div>
-            <div style="margin-top:15px;font-size:12px;">Demo:<br>Admin: admin / admin123<br>Field Clerk: clerk1 / clerk123</div>
+            <div style="margin-top:15px;font-size:12px;">Demo:<br>Admin: admin / admin123<br>Clerk: clerk1 / clerk123</div>
         </div>
     </div>
 
     <div id="appContainer" class="app-container">
         <div class="header">
-            <h1><i class="fas fa-leaf"></i> KTDA GIS – Carbon & Soil</h1>
-            <div><span id="userRoleBadge"></span> <button onclick="logout()" style="background:none; border:none; color:white;"><i class="fas fa-sign-out-alt"></i></button></div>
+            <h1><i class="fas fa-leaf"></i> KTDA GIS</h1>
+            <div id="userRoleBadge"></div>
         </div>
         <div class="tabs" id="tabsContainer"></div>
         <div id="pageContainer"></div>
     </div>
 
+    <!-- Modal for recording -->
+    <div id="recordModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Record</h3>
+                <span class="close-modal" onclick="closeModal()">&times;</span>
+            </div>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+
     <script>
-        const USERS = { admin: { password: 'admin123', role: 'admin' }, clerk1: { password: 'clerk123', role: 'clerk' } };
+        // Mock data
+        let deliveries = [];
+        let soilSamples = [];
+        let fertilizerDistributions = [];
+        let carbonProjects = [
+            { id: 1, name: "Rukuriri SOC Pilot", methodology: "VM0042", areaHa: 2500, estCredits: 12500, status: "Registered", issued: 0 },
+            { id: 2, name: "Mungania Tree ARR", methodology: "VM0047", areaHa: 1200, estCredits: 4800, status: "Pending", issued: 0 }
+        ];
+        let farmers = [
+            { id: 1, name: "James Mwangi", number: "KTF001234", acres: 2.5, zone: "Rukuriri North", phone: "0712345678" },
+            { id: 2, name: "Mary Wanjiku", number: "KTF001235", acres: 3.2, zone: "Rukuriri North", phone: "0723456789" },
+            { id: 3, name: "John Kamau", number: "KTF001238", acres: 3.5, zone: "Mungania East", phone: "0756789012" }
+        ];
+
+        const USERS = {
+            admin: { password: 'admin123', role: 'admin', name: 'Administrator' },
+            clerk1: { password: 'clerk123', role: 'clerk', name: 'Field Clerk' }
+        };
         let currentRole = null;
         let map = null;
-
-        // Mock data
-        let carbonProjects = [
-            { id: 1, name: "Rukuriri SOC Pilot", methodology: "VM0042", startDate: "2025-01-01", areaHa: 2500, estCredits: 12500, status: "Registered", issued: 0 },
-            { id: 2, name: "Mungania Tree ARR", methodology: "VM0047", startDate: "2025-03-15", areaHa: 1200, estCredits: 4800, status: "Pending", issued: 0 }
-        ];
-        let soilSamples = [
-            { id: 1, lat: 0.23, lng: 37.55, oc: 2.5, ph: 6.2, n: 180, p: 22, k: 150 },
-            { id: 2, lat: 0.235, lng: 37.552, oc: 3.1, ph: 6.5, n: 210, p: 28, k: 165 },
-            { id: 3, lat: -0.45, lng: 37.78, oc: 1.8, ph: 5.8, n: 140, p: 15, k: 110 }
-        ];
-        let fertilizerDistributions = [
-            { id: 1, farmer: "James Mwangi", type: "NPK 25:5:5", qty: 50, date: "2026-05-10", status: "Delivered" },
-            { id: 2, farmer: "Mary Wanjiku", type: "CAN", qty: 40, date: "2026-05-12", status: "Delivered" }
-        ];
-        let fertilizerInventory = [
-            { type: "NPK 25:5:5", stock: 1200, unit: "kg" },
-            { type: "CAN", stock: 800, unit: "kg" },
-            { type: "Urea", stock: 600, unit: "kg" },
-            { type: "Potassium Sulphate", stock: 400, unit: "kg" },
-            { type: "Organic Fertilizer", stock: 2000, unit: "kg" }
-        ];
+        let activeSubView = 'farmers';
 
         window.doLogin = function() {
             const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
-            if (USERS[username] && USERS[username].password === password) {
-                currentRole = USERS[username].role;
+            const user = USERS[username];
+            if (user && user.password === password) {
+                currentRole = user.role;
                 document.getElementById('loginOverlay').style.display = 'none';
                 document.getElementById('appContainer').style.display = 'flex';
-                document.getElementById('userRoleBadge').innerHTML = currentRole === 'admin' ? '<i class="fas fa-user-shield"></i> Admin' : '<i class="fas fa-clipboard-list"></i> Field Clerk';
+                document.getElementById('userRoleBadge').innerHTML = currentRole === 'admin' ? '<i class="fas fa-user-shield"></i> Admin <div class="three-dot-menu" onclick="event.stopPropagation();toggleMenu()"><i class="fas fa-ellipsis-v"></i><div id="threeDotContent" class="three-dot-content"><a onclick="switchSubView(\'farmers\')">👨‍🌾 Farmers</a><a onclick="switchSubView(\'fertilizer\')">💊 Fertilizer Assets</a><a onclick="switchSubView(\'carbon\')">🌿 Carbon & SOC</a><a onclick="switchSubView(\'reports\')">📄 Reports</a></div></div>' : '<i class="fas fa-clipboard-list"></i> Field Clerk';
                 buildUI();
             } else {
-                document.getElementById('loginError').innerText = 'Invalid credentials. Use admin/admin123 or clerk1/clerk123';
+                document.getElementById('loginError').innerText = 'Invalid credentials';
             }
         };
-        window.logout = function() {
-            document.getElementById('loginOverlay').style.display = 'flex';
-            document.getElementById('appContainer').style.display = 'none';
-            if (map) map.remove();
-            map = null;
-            currentRole = null;
+
+        function toggleMenu() {
+            const menu = document.getElementById('threeDotContent');
+            menu.classList.toggle('show');
+        }
+        window.onclick = function(e) {
+            if (!e.target.matches('.fa-ellipsis-v') && !e.target.closest('.three-dot-menu')) {
+                const menu = document.getElementById('threeDotContent');
+                if (menu) menu.classList.remove('show');
+            }
         };
+
+        function switchSubView(view) {
+            activeSubView = view;
+            document.getElementById('threeDotContent').classList.remove('show');
+            renderAdminDashboard();
+        }
 
         function initMap() {
             if (map) return;
             map = L.map('map').setView([0.5, 36.5], 8);
             L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '© OpenStreetMap' }).addTo(map);
-            // Add sample markers for soil sampling points
-            soilSamples.forEach(s => {
-                L.marker([s.lat, s.lng]).addTo(map).bindPopup(`<b>Sample ${s.id}</b><br>OC: ${s.oc}%<br>pH: ${s.ph}`);
+            farmers.forEach(f => {
+                // Random coords for demo
+                let lat = 0.23 + (f.id * 0.005);
+                let lng = 37.55 + (f.id * 0.005);
+                L.marker([lat, lng]).addTo(map).bindPopup(`<b>${f.name}</b><br>${f.acres} acres`);
             });
         }
 
-        function initSoilMap() {
-            const container = document.getElementById('soil-map');
-            if (!container || map) return;
-            const soilMap = L.map('soil-map').setView([0.5, 36.5], 8);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(soilMap);
-            soilSamples.forEach(s => {
-                const color = s.oc > 2.5 ? '#4CAF50' : (s.oc > 1.5 ? '#FF9800' : '#f44336');
-                L.marker([s.lat, s.lng], { icon: L.divIcon({ html: `<div style="background:${color}; width:12px; height:12px; border-radius:50%; border:2px solid white;"></div>`, iconSize: [12,12] }) }).addTo(soilMap)
-                    .bindPopup(`<b>OC: ${s.oc}%</b><br>pH: ${s.ph}<br>N: ${s.n} mg/kg`);
-            });
-        }
-
-        function registerCarbonProject() {
-            const name = prompt("Project name:");
-            const area = prompt("Area (hectares):");
-            if (name && area) {
-                const newId = carbonProjects.length + 1;
-                carbonProjects.push({
-                    id: newId, name, methodology: "VM0042", startDate: new Date().toISOString().split('T')[0],
-                    areaHa: parseFloat(area), estCredits: parseFloat(area) * 5, status: "Pending", issued: 0
-                });
-                alert("Project registered!");
-                refreshCarbonTable();
+        // Modal functions
+        let currentRecordType = '';
+        function openModal(type) {
+            currentRecordType = type;
+            const modal = document.getElementById('recordModal');
+            const title = document.getElementById('modalTitle');
+            const body = document.getElementById('modalBody');
+            if (type === 'delivery') {
+                title.innerText = 'Record Tea Delivery';
+                body.innerHTML = `
+                    <label>Farmer</label><select id="deliveryFarmer">${farmers.map(f => `<option value="${f.name}">${f.name}</option>`).join('')}</select>
+                    <label>Weight (kg)</label><input type="number" id="deliveryWeight" placeholder="kg">
+                    <label>Leaf Grade</label><select id="deliveryGrade"><option>A</option><option>B</option><option>C</option></select>
+                    <button onclick="submitDelivery()">Submit</button>
+                `;
+            } else if (type === 'soil') {
+                title.innerText = 'Record Soil Sample';
+                body.innerHTML = `
+                    <label>Farmer / Location</label><input id="soilLocation" placeholder="Farm name or ID">
+                    <label>Organic Carbon (%)</label><input id="soilOC" type="number" step="0.1">
+                    <label>pH</label><input id="soilPH" type="number" step="0.1">
+                    <label>Nitrogen (mg/kg)</label><input id="soilN" type="number">
+                    <button onclick="submitSoilSample()">Submit</button>
+                `;
+            } else if (type === 'fertilizer') {
+                title.innerText = 'Record Fertilizer Distribution';
+                body.innerHTML = `
+                    <label>Farmer</label><select id="fertFarmer">${farmers.map(f => `<option value="${f.name}">${f.name}</option>`).join('')}</select>
+                    <label>Fertilizer Type</label><select id="fertType"><option>NPK 25:5:5</option><option>CAN</option><option>Urea</option></select>
+                    <label>Quantity (kg)</label><input type="number" id="fertQty">
+                    <button onclick="submitFertilizer()">Submit</button>
+                `;
+            } else if (type === 'carbon') {
+                title.innerText = 'Register Carbon Project';
+                body.innerHTML = `
+                    <label>Project Name</label><input id="carbonName" placeholder="Project name">
+                    <label>Methodology</label><select id="carbonMethod"><option>VM0042 (SOC)</option><option>VM0047 (ARR)</option></select>
+                    <label>Area (ha)</label><input type="number" id="carbonArea">
+                    <button onclick="submitCarbonProject()">Register</button>
+                `;
             }
+            modal.style.display = 'flex';
         }
+        function closeModal() { document.getElementById('recordModal').style.display = 'none'; }
 
-        function issueCredits(projectId) {
-            const project = carbonProjects.find(p => p.id === projectId);
-            if (project && project.status === "Registered") {
-                const credits = project.estCredits;
-                project.issued = credits;
-                alert(`${credits} credits issued for ${project.name}`);
-                refreshCarbonTable();
-            } else {
-                alert("Project not yet registered or already issued.");
-            }
+        function submitDelivery() {
+            const farmer = document.getElementById('deliveryFarmer').value;
+            const weight = document.getElementById('deliveryWeight').value;
+            if (!weight) { alert("Enter weight"); return; }
+            deliveries.push({ farmer, weight, date: new Date().toISOString().split('T')[0], grade: document.getElementById('deliveryGrade').value });
+            alert("Delivery recorded!");
+            closeModal();
         }
-
-        function refreshCarbonTable() {
-            const tbody = document.querySelector('#carbon-table tbody');
-            if (tbody) {
-                tbody.innerHTML = carbonProjects.map(p => `
-                    <tr>
-                        <td>${p.name}</td><td>${p.methodology}</td><td>${p.startDate}</td><td>${p.areaHa}</td>
-                        <td>${p.estCredits}</td><td>${p.status}</td><td>${p.issued > 0 ? p.issued : '-'}</td>
-                        <td>${p.status === 'Registered' && p.issued === 0 ? `<button onclick="issueCredits(${p.id})">Issue Credits</button>` : 'Issued'}</td>
-                    </tr>
-                `).join('');
-            }
+        function submitSoilSample() {
+            const location = document.getElementById('soilLocation').value;
+            const oc = document.getElementById('soilOC').value;
+            if (!oc) { alert("Enter OC"); return; }
+            soilSamples.push({ location, oc, ph: document.getElementById('soilPH').value, n: document.getElementById('soilN').value, date: new Date().toISOString() });
+            alert("Soil sample recorded!");
+            closeModal();
         }
-
-        function distributeFertilizer() {
-            const farmer = prompt("Farmer name:");
-            const type = prompt("Fertilizer type (NPK, CAN, Urea, etc.):");
-            const qty = prompt("Quantity (kg):");
-            if (farmer && type && qty) {
-                const newDist = { id: fertilizerDistributions.length+1, farmer, type, qty: parseFloat(qty), date: new Date().toISOString().split('T')[0], status: "Delivered" };
-                fertilizerDistributions.push(newDist);
-                alert("Distribution recorded.");
-                refreshFertilizerTable();
-            }
+        function submitFertilizer() {
+            const farmer = document.getElementById('fertFarmer').value;
+            const qty = document.getElementById('fertQty').value;
+            if (!qty) { alert("Enter quantity"); return; }
+            fertilizerDistributions.push({ farmer, type: document.getElementById('fertType').value, qty, date: new Date().toISOString().split('T')[0] });
+            alert("Fertilizer distribution recorded!");
+            closeModal();
         }
-
-        function refreshFertilizerTable() {
-            const tbody = document.querySelector('#fertilizer-table tbody');
-            if (tbody) {
-                tbody.innerHTML = fertilizerDistributions.map(d => `
-                    <tr><td>${d.farmer}</td><td>${d.type}</td><td>${d.qty} kg</td><td>${d.date}</td><td>${d.status}</td></tr>
-                `).join('');
-            }
+        function submitCarbonProject() {
+            const name = document.getElementById('carbonName').value;
+            const area = document.getElementById('carbonArea').value;
+            if (!name || !area) { alert("Enter name and area"); return; }
+            carbonProjects.push({ id: carbonProjects.length+1, name, methodology: document.getElementById('carbonMethod').value, areaHa: parseFloat(area), estCredits: area*5, status: "Pending", issued: 0 });
+            alert("Carbon project registered!");
+            closeModal();
+            if (currentRole === 'admin') renderAdminDashboard();
         }
 
         function buildUI() {
@@ -248,14 +274,18 @@
             tabsContainer.innerHTML = '';
             pageContainer.innerHTML = '';
 
-            let tabs = [
-                { id: 'map', label: '🗺️ Map', icon: 'map' },
-                { id: 'carbon', label: '🌿 Carbon Credits', icon: 'leaf' },
-                { id: 'soil', label: '🌱 Soil Nutrition', icon: 'seedling' },
-                { id: 'fertilizer', label: '💊 Fertilizer Assets', icon: 'truck' },
-                { id: 'farmers', label: '👨‍🌾 Farmers', icon: 'users' },
-                { id: 'reports', label: '📄 Reports', icon: 'file-alt' }
-            ];
+            let tabs;
+            if (currentRole === 'admin') {
+                tabs = [
+                    { id: 'map', label: '🗺️ Map', icon: 'map' },
+                    { id: 'dashboard', label: '📊 Dashboard', icon: 'chart-line' }
+                ];
+            } else {
+                tabs = [
+                    { id: 'map', label: '🗺️ Map', icon: 'map' },
+                    { id: 'records', label: '📋 Records', icon: 'clipboard-list' }
+                ];
+            }
 
             tabs.forEach((tab, idx) => {
                 const btn = document.createElement('div');
@@ -267,66 +297,89 @@
                 const pageDiv = document.createElement('div');
                 pageDiv.id = `page-${tab.id}`;
                 pageDiv.className = 'page';
-                pageDiv.innerHTML = getPageContent(tab.id);
+                if (currentRole === 'admin' && tab.id === 'dashboard') {
+                    pageDiv.innerHTML = `<div class="flex-content" id="adminDashboard"></div>`;
+                } else if (currentRole === 'clerk' && tab.id === 'records') {
+                    pageDiv.innerHTML = `
+                        <div class="flex-content">
+                            <div class="records-grid">
+                                <div class="record-card" onclick="openModal('delivery')"><div class="record-icon">🚚</div><div>Record Delivery</div></div>
+                                <div class="record-card" onclick="openModal('soil')"><div class="record-icon">🌱</div><div>Soil Sample</div></div>
+                                <div class="record-card" onclick="openModal('fertilizer')"><div class="record-icon">💊</div><div>Fertilizer Distribution</div></div>
+                                <div class="record-card" onclick="openModal('carbon')"><div class="record-icon">🌿</div><div>Carbon Project</div></div>
+                            </div>
+                        </div>`;
+                } else if (tab.id === 'map') {
+                    pageDiv.innerHTML = `<div class="flex-content"><div class="map-container"><div id="map"></div></div><div class="legend"><div><span class="legend-color" style="background:#e74c3c;"></span> Farmers</div></div></div>`;
+                }
                 if (idx !== 0) pageDiv.classList.remove('active');
                 else pageDiv.classList.add('active');
                 pageContainer.appendChild(pageDiv);
             });
 
-            if (document.getElementById('map')) initMap();
-            if (document.getElementById('soil-map')) initSoilMap();
-            refreshCarbonTable();
-            refreshFertilizerTable();
+            if (currentRole === 'admin') {
+                renderAdminDashboard();
+            }
+            initMap();
         }
 
-        function getPageContent(pageId) {
-            if (pageId === 'map') return `
-                <div class="flex-content">
-                    <div class="map-container"><div id="map"></div></div>
-                    <div class="legend"><div><span class="legend-color" style="background:#e74c3c;"></span> Factories</div><div><span class="legend-color" style="background:#27ae60;"></span> Farmers</div><div><span class="legend-color" style="background:#f39c12;"></span> Soil Sample Points</div></div>
-                </div>`;
-            if (pageId === 'carbon') return `
-                <div class="flex-content">
-                    <div class="stat-row">
-                        <div class="stat-card"><div class="stat-number">88,000</div><div>Total Carbon Stock (tCO₂e)</div></div>
-                        <div class="stat-card"><div class="stat-number">5,200</div><div>Annual Sequestration (tCO₂e)</div></div>
-                        <div class="stat-card"><div class="stat-number">$1.43M</div><div>Estimated Credit Revenue</div></div>
-                        <div class="stat-card"><div class="stat-number">12,500</div><div>Credits Issued to Date</div></div>
-                    </div>
-                    <div class="card">
-                        <h3>Register New Carbon Project</h3>
-                        <button onclick="registerCarbonProject()">+ Register Project</button>
-                    </div>
-                    <div class="card">
-                        <h3>Carbon Asset Register</h3>
-                        <table class="data-table" id="carbon-table">
-                            <thead><tr><th>Project Name</th><th>Methodology</th><th>Start Date</th><th>Area (ha)</th><th>Est. Credits</th><th>Status</th><th>Issued</th><th>Action</th></tr></thead>
-                            <tbody></tbody>
-                        </table>
-                    </div>
-                </div>`;
-            if (pageId === 'soil') return `
-                <div class="flex-content">
-                    <div class="map-container"><div id="soil-map"></div></div>
-                    <div class="nutrient-grid">
-                        <div class="nutrient-card"><strong>Organic Carbon</strong><br>2.5% (avg)</div>
-                        <div class="nutrient-card"><strong>pH</strong><br>6.2 (optimal)</div>
-                        <div class="nutrient-card"><strong>Nitrogen</strong><br>180 mg/kg</div>
-                        <div class="nutrient-card"><strong>Phosphorus</strong><br>22 mg/kg</div>
-                        <div class="nutrient-card"><strong>Potassium</strong><br>150 mg/kg</div>
-                        <div class="nutrient-card"><strong>SOC Stock</strong><br>45 tCO₂e/ha</div>
-                    </div>
-                    <div class="card"><h3>Fertilizer Recommendations</h3><p>Based on soil tests, apply NPK 25:5:5 at 200 kg/ha in zones with OC < 2%. In high‑OC zones, reduce nitrogen by 20%.</p></div>
-                </div>`;
-            if (pageId === 'fertilizer') return `
-                <div class="flex-content">
-                    <div class="card"><h3>Record Fertilizer Distribution</h3><button onclick="distributeFertilizer()">+ Record Distribution</button></div>
-                    <div class="card"><h3>Inventory Status</h3><table class="data-table"><thead><tr><th>Fertilizer Type</th><th>Stock (kg)</th></tr></thead><tbody>${fertilizerInventory.map(i => `<tr><td>${i.type}</td><td>${i.stock}</td></tr>`).join('')}</tbody></table></div>
-                    <div class="card"><h3>Farmer Fertilizer Asset Register</h3><table class="data-table" id="fertilizer-table"><thead><tr><th>Farmer</th><th>Type</th><th>Quantity</th><th>Date</th><th>Status</th></tr></thead><tbody>${fertilizerDistributions.map(d => `<tr><td>${d.farmer}</td><td>${d.type}</td><td>${d.qty} kg</td><td>${d.date}</td><td>${d.status}</td></tr>`).join('')}</tbody></table></div>
-                </div>`;
-            if (pageId === 'farmers') return `<div class="flex-content"><h2>Registered Farmers</h2><table class="data-table"><thead><tr><th>ID</th><th>Name</th><th>Phone</th><th>Acreage</th><th>Zone</th></tr></thead><tbody><tr><td>KTF001234</td><td>James Mwangi</td><td>0712345678</td><td>2.5</td><td>Rukuriri North</td></tr><tr><td>KTF001235</td><td>Mary Wanjiku</td><td>0723456789</td><td>3.2</td><td>Rukuriri North</td></tr><tr><td>KTF001238</td><td>John Kamau</td><td>0756789012</td><td>3.5</td><td>Mungania East</td></tr></tbody></table></div>`;
-            if (pageId === 'reports') return `<div class="flex-content"><h2>Carbon & Fertilizer Reports</h2><div class="card"><strong>Carbon credits issued:</strong> 12,500 tCO₂e<br><strong>Fertilizer distributed (2026):</strong> 2,450 kg<br><button class="print-btn" onclick="window.print()">Print Report</button></div></div>`;
-            return '';
+        function renderAdminDashboard() {
+            const container = document.getElementById('adminDashboard');
+            if (!container) return;
+            // Compute stats
+            const totalFarmers = farmers.length;
+            const totalDeliveries = deliveries.length;
+            const totalFertilizer = fertilizerDistributions.reduce((sum, d) => sum + parseFloat(d.qty), 0);
+            const totalCarbonCredits = carbonProjects.reduce((sum, p) => sum + (p.issued || 0), 0);
+
+            let subContent = '';
+            if (activeSubView === 'farmers') {
+                subContent = `<h3>Farmers List</h3><table class="data-table"><thead><tr><th>ID</th><th>Name</th><th>Phone</th><th>Acreage</th><th>Zone</th></tr></thead><tbody>${farmers.map(f => `<tr><td>${f.number}</td><td>${f.name}</td><td>${f.phone}</td><td>${f.acres}</td><td>${f.zone}</td></tr>`).join('')}</tbody></table>`;
+            } else if (activeSubView === 'fertilizer') {
+                subContent = `<h3>Fertilizer Assets</h3><table class="data-table"><thead><tr><th>Farmer</th><th>Type</th><th>Quantity (kg)</th><th>Date</th></tr></thead><tbody>${fertilizerDistributions.map(d => `<tr><td>${d.farmer}</td><td>${d.type}</td><td>${d.qty}</td><td>${d.date}</td></tr>`).join('')}</tbody></table>`;
+            } else if (activeSubView === 'carbon') {
+                subContent = `<h3>Carbon & SOC Projects</h3><table class="data-table"><thead><tr><th>Project</th><th>Methodology</th><th>Area (ha)</th><th>Est. Credits</th><th>Status</th><th>Issued</th></tr></thead><tbody>${carbonProjects.map(p => `<tr><td>${p.name}</td><td>${p.methodology}</td><td>${p.areaHa}</td><td>${p.estCredits}</td><td>${p.status}</td><td>${p.issued}</td></tr>`).join('')}</tbody></table>`;
+            } else if (activeSubView === 'reports') {
+                subContent = `<h3>Printable Reports</h3><button class="print-btn" onclick="window.print()">Print Dashboard</button><button onclick="exportCSV()">Export CSV</button>`;
+            }
+
+            container.innerHTML = `
+                <div class="stat-row">
+                    <div class="stat-card"><div class="stat-number">${totalFarmers}</div><div>Farmers</div></div>
+                    <div class="stat-card"><div class="stat-number">${deliveries.length}</div><div>Deliveries</div></div>
+                    <div class="stat-card"><div class="stat-number">${totalFertilizer} kg</div><div>Fertilizer Distributed</div></div>
+                    <div class="stat-card"><div class="stat-number">${totalCarbonCredits}</div><div>Carbon Credits Issued</div></div>
+                </div>
+                <div class="card">
+                    <canvas id="carbonChart" width="400" height="200"></canvas>
+                </div>
+                <div class="card">
+                    ${subContent}
+                </div>
+            `;
+            // Draw chart
+            const ctx = document.getElementById('carbonChart')?.getContext('2d');
+            if (ctx) {
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: carbonProjects.map(p => p.name),
+                        datasets: [{ label: 'Est. Credits (tCO₂e)', data: carbonProjects.map(p => p.estCredits), backgroundColor: '#4CAF50' }]
+                    }
+                });
+            }
+        }
+
+        function exportCSV() {
+            let csv = "Farmers\nID,Name,Phone,Acreage,Zone\n";
+            farmers.forEach(f => csv += `${f.number},${f.name},${f.phone},${f.acres},${f.zone}\n`);
+            csv += "\nFertilizer Distributions\nFarmer,Type,Quantity,Date\n";
+            fertilizerDistributions.forEach(d => csv += `${d.farmer},${d.type},${d.qty},${d.date}\n`);
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'ktda_report.csv';
+            a.click();
         }
 
         function showPage(pageId) {
@@ -336,8 +389,17 @@
             const activeTab = Array.from(document.querySelectorAll('.tab')).find(t => t.innerText.toLowerCase().includes(pageId));
             if (activeTab) activeTab.classList.add('active');
             if (pageId === 'map' && map) setTimeout(() => map.invalidateSize(), 100);
-            if (pageId === 'soil' && !window.soilMapInit) { initSoilMap(); window.soilMapInit = true; }
         }
+
+        window.switchSubView = switchSubView;
+        window.toggleMenu = toggleMenu;
+        window.openModal = openModal;
+        window.closeModal = closeModal;
+        window.submitDelivery = submitDelivery;
+        window.submitSoilSample = submitSoilSample;
+        window.submitFertilizer = submitFertilizer;
+        window.submitCarbonProject = submitCarbonProject;
+        window.exportCSV = exportCSV;
     </script>
 </body>
 </html>
