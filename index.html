@@ -80,10 +80,14 @@
         .legend { position: absolute; bottom: 20px; right: 10px; background: rgba(255,255,255,0.95); padding: 8px 12px; border-radius: 8px; font-size: 11px; z-index: 1000; }
         .legend-color { width: 12px; height: 12px; display: inline-block; margin-right: 5px; border-radius: 2px; }
         .three-dot-menu { position: relative; display: inline-block; margin-left: 10px; cursor: pointer; }
-        .three-dot-content { display: none; position: absolute; right: 0; background: white; min-width: 180px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); border-radius: 8px; z-index: 100; }
+        .three-dot-content { display: none; position: absolute; right: 0; top: 100%; background: white; min-width: 180px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); border-radius: 8px; z-index: 100; margin-top: 5px; }
         .three-dot-content a { display: block; padding: 10px 15px; color: #333; text-decoration: none; cursor: pointer; }
         .three-dot-content a:hover { background: #f0f0f0; }
         .show { display: block; }
+        .records-grid { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; margin-top: 20px; }
+        .record-card { background: white; padding: 25px; border-radius: 12px; text-align: center; cursor: pointer; width: 180px; transition: transform 0.2s; }
+        .record-card:hover { transform: translateY(-5px); background: #e8f5e9; }
+        .record-icon { font-size: 48px; margin-bottom: 10px; }
         @media (max-width: 768px) { .side-panel { width: 240px; } .stat-card { min-width: 120px; } }
     </style>
 </head>
@@ -102,7 +106,7 @@
     <div id="appContainer" class="app-container">
         <div class="header">
             <h1><i class="fas fa-leaf"></i> KTDA GIS</h1>
-            <div><span id="userRoleBadge"></span> <button onclick="logout()" style="background:none; border:none; color:white;"><i class="fas fa-sign-out-alt"></i></button></div>
+            <div><span id="userRoleBadge"></span> <button onclick="logout()" style="background:none; border:none; color:white; margin-left:10px;"><i class="fas fa-sign-out-alt"></i></button></div>
         </div>
         <div class="tabs" id="tabsContainer"></div>
         <div id="pageContainer"></div>
@@ -133,23 +137,28 @@
             ]
         };
         // Additional admin data
-        let deliveries = [];
-        let fertilizerDistributions = [];
+        let deliveries = [
+            { farmer: "James Mwangi", weight: 450, date: "2026-05-20" },
+            { farmer: "Mary Wanjiku", weight: 380, date: "2026-05-19" }
+        ];
+        let fertilizerDistributions = [
+            { farmer: "James Mwangi", type: "NPK 25:5:5", qty: 50, date: "2026-05-15" },
+            { farmer: "Mary Wanjiku", type: "CAN", qty: 40, date: "2026-05-16" }
+        ];
         let carbonProjects = [
             { id: 1, name: "Rukuriri SOC Pilot", methodology: "VM0042", areaHa: 2500, estCredits: 12500, status: "Registered", issued: 0 },
             { id: 2, name: "Mungania Tree ARR", methodology: "VM0047", areaHa: 1200, estCredits: 4800, status: "Pending", issued: 0 }
         ];
-        let soilSamples = [];
 
         const USERS = { admin: { password: 'admin123', role: 'admin' }, clerk1: { password: 'clerk123', role: 'clerk' } };
         let currentRole = null;
         let map = null;
         let currentFilterZone = null;
         let markers = { factories: [], farmers: [], centers: [], zones: [] };
-        let adminSubView = 'farmers'; // farmers, fertilizer, carbon, reports
-        let chart1 = null, chart2 = null;
+        let adminSubView = 'farmers';
+        let pieChart = null;
+        let barChart = null;
 
-        // Helper: get coordinates for zones (polygons not implemented, use center)
         function getZoneCenter(zoneId) {
             const zone = locations.teaZones.find(z => z.id === zoneId);
             return zone ? { lat: zone.lat, lng: zone.lng } : null;
@@ -158,20 +167,17 @@
         function filterMarkersByZone(zoneId) {
             currentFilterZone = zoneId;
             updateMapMarkers();
-            // Also update side panel lists
             renderSidePanels();
         }
 
         function updateMapMarkers() {
             if (!map) return;
-            // Clear all layers except base tile
             markers.factories.forEach(m => map.removeLayer(m));
             markers.farmers.forEach(m => map.removeLayer(m));
             markers.centers.forEach(m => map.removeLayer(m));
             markers.zones.forEach(m => map.removeLayer(m));
             markers = { factories: [], farmers: [], centers: [], zones: [] };
 
-            // Add filtered data
             let filteredFactories = currentFilterZone ? locations.factories.filter(f => f.zoneId === currentFilterZone) : locations.factories;
             let filteredFarmers = currentFilterZone ? locations.farmers.filter(f => f.zoneId === currentFilterZone) : locations.farmers;
             let filteredCenters = currentFilterZone ? locations.centers.filter(c => c.zoneId === currentFilterZone) : locations.centers;
@@ -193,7 +199,6 @@
                 markers.centers.push(marker);
             });
             filteredZones.forEach(z => {
-                // Add a polygon placeholder? For simplicity, add a marker at zone center
                 const center = getZoneCenter(z.id);
                 if (center) {
                     const marker = L.marker([center.lat, center.lng], { icon: L.divIcon({ html: '<div style="background:#2c5e2e; width:12px; height:12px; border-radius:50%; border:2px solid white;"></div>', iconSize: [12,12] }) }).addTo(map);
@@ -216,13 +221,12 @@
             zones.forEach(z => {
                 html += `<button class="filter-btn ${currentFilterZone === z.id ? 'filter-active' : ''}" onclick="filterMarkersByZone(${z.id})">${z.name}</button>`;
             });
-            html += `</div><div class="panel-title">Factories</div><div id="factory-list">`;
+            html += `</div><div class="panel-title">Factories</div>`;
             factories.forEach(f => html += `<div class="list-item" onclick="zoomToLocation(${f.lat}, ${f.lng})"><div class="item-name">🏭 ${f.name}</div><div class="item-detail">${f.region}</div></div>`);
-            html += `</div><div class="panel-title">Farmers</div><div id="farmer-list">`;
+            html += `<div class="panel-title">Farmers</div>`;
             farmers.forEach(f => html += `<div class="list-item" onclick="zoomToLocation(${f.lat}, ${f.lng})"><div class="item-name">👤 ${f.name}</div><div class="item-detail">${f.number} | ${f.acres} acres</div></div>`);
-            html += `</div><div class="panel-title">Buying Centers</div><div id="center-list">`;
+            html += `<div class="panel-title">Buying Centers</div>`;
             centers.forEach(c => html += `<div class="list-item" onclick="zoomToLocation(${c.lat}, ${c.lng})"><div class="item-name">📍 ${c.name}</div><div class="item-detail">Factory: ${c.factory}</div></div>`);
-            html += `</div>`;
             sidePanel.innerHTML = html;
         }
 
@@ -238,13 +242,13 @@
             renderSidePanels();
         }
 
-        // Admin dashboard chart update
         function updateAdminCharts() {
             const ctx1 = document.getElementById('pieChart')?.getContext('2d');
             const ctx2 = document.getElementById('barChart')?.getContext('2d');
             if (!ctx1) return;
-            if (chart1) chart1.destroy();
-            if (chart2) chart2.destroy();
+            if (pieChart) pieChart.destroy();
+            if (barChart) barChart.destroy();
+            
             let labels, data;
             if (adminSubView === 'farmers') {
                 const zoneFarmers = {};
@@ -263,8 +267,8 @@
                 labels = ['Deliveries', 'Fertilizer (kg)', 'Carbon Credits'];
                 data = [deliveries.length, fertilizerDistributions.reduce((s,d)=>s+d.qty,0), carbonProjects.reduce((s,p)=>s+p.estCredits,0)];
             }
-            chart1 = new Chart(ctx1, { type: 'pie', data: { labels: labels, datasets: [{ data: data, backgroundColor: ['#4CAF50','#FF9800','#2196F3','#e74c3c'] }] } });
-            chart2 = new Chart(ctx2, { type: 'bar', data: { labels: labels, datasets: [{ label: 'Value', data: data, backgroundColor: '#4CAF50' }] } });
+            pieChart = new Chart(ctx1, { type: 'pie', data: { labels: labels, datasets: [{ data: data, backgroundColor: ['#4CAF50','#FF9800','#2196F3','#e74c3c'] }] } });
+            barChart = new Chart(ctx2, { type: 'bar', data: { labels: labels, datasets: [{ label: 'Value', data: data, backgroundColor: '#4CAF50' }] } });
         }
 
         function renderAdminDashboard() {
@@ -276,7 +280,7 @@
             } else if (adminSubView === 'fertilizer') {
                 tableHtml = `<h3>Fertilizer Assets</h3><table class="data-table"><thead><tr><th>Farmer</th><th>Type</th><th>Quantity (kg)</th><th>Date</th></tr></thead><tbody>${fertilizerDistributions.map(d => `<tr><td>${d.farmer}</td><td>${d.type}</td><td>${d.qty}</td><td>${d.date}</td></tr>`).join('')}</tbody></table>`;
             } else if (adminSubView === 'carbon') {
-                tableHtml = `<h3>Carbon & SOC Projects</h3><table class="data-table"><thead><tr><th>Project</th><th>Methodology</th><th>Area (ha)</th><th>Est. Credits</th><th>Status</th><th>Issued</th></tr></thead><tbody>${carbonProjects.map(p => `<tr><td>${p.name}</td><td>${p.methodology}</td><td>${p.areaHa}</td><td>${p.estCredits}</td><td>${p.status}</td><td>${p.issued}</td></tr>`).join('')}</tbody></table>`;
+                tableHtml = `<h3>Carbon & SOC Projects</h3><table class="data-table"><thead><tr><th>Project</th><th>Methodology</th><th>Area (ha)</th><th>Est. Credits</th><th>Status</th><th>Issued</th></tr></thead><tbody>${carbonProjects.map(p => `<tr><td>${p.name}</td><td>${p.methodology}</td><td>${p.areaHa}</td><td>${p.estCredits}</td><td>${p.status}</td><td>${p.issued}</td><tr>`).join('')}</tbody></table>`;
             } else {
                 tableHtml = `<h3>Reports</h3><button class="print-btn" onclick="window.print()">Print Dashboard</button><button onclick="exportCSV()">Export CSV</button>`;
             }
@@ -286,8 +290,24 @@
 
         function switchAdminSubView(view) {
             adminSubView = view;
-            document.getElementById('threeDotContent').classList.remove('show');
+            // Close the menu after selection
+            const menu = document.getElementById('threeDotContent');
+            if (menu) menu.classList.remove('show');
             renderAdminDashboard();
+        }
+
+        function toggleMenu(e) {
+            e.stopPropagation();
+            const menu = document.getElementById('threeDotContent');
+            if (menu) menu.classList.toggle('show');
+        }
+
+        function closeMenuOnClickOutside(event) {
+            const menu = document.getElementById('threeDotContent');
+            const dotMenu = document.querySelector('.three-dot-menu');
+            if (menu && dotMenu && !dotMenu.contains(event.target)) {
+                menu.classList.remove('show');
+            }
         }
 
         function logout() {
@@ -305,16 +325,14 @@
                 currentRole = USERS[username].role;
                 document.getElementById('loginOverlay').style.display = 'none';
                 document.getElementById('appContainer').style.display = 'flex';
-                document.getElementById('userRoleBadge').innerHTML = currentRole === 'admin' ? '<i class="fas fa-user-shield"></i> Admin <div class="three-dot-menu" onclick="event.stopPropagation();toggleMenu()"><i class="fas fa-ellipsis-v"></i><div id="threeDotContent" class="three-dot-content"><a onclick="switchAdminSubView(\'farmers\')">👨‍🌾 Farmers</a><a onclick="switchAdminSubView(\'fertilizer\')">💊 Fertilizer Assets</a><a onclick="switchAdminSubView(\'carbon\')">🌿 Carbon & SOC</a><a onclick="switchAdminSubView(\'reports\')">📄 Reports</a></div></div>' : '<i class="fas fa-clipboard-list"></i> Field Clerk';
+                const roleHtml = currentRole === 'admin' ? 
+                    '<i class="fas fa-user-shield"></i> Admin <div class="three-dot-menu" onclick="toggleMenu(event)"><i class="fas fa-ellipsis-v"></i><div id="threeDotContent" class="three-dot-content"><a onclick="switchAdminSubView(\'farmers\')">👨‍🌾 Farmers</a><a onclick="switchAdminSubView(\'fertilizer\')">💊 Fertilizer Assets</a><a onclick="switchAdminSubView(\'carbon\')">🌿 Carbon & SOC</a><a onclick="switchAdminSubView(\'reports\')">📄 Reports</a></div></div>' : 
+                    '<i class="fas fa-clipboard-list"></i> Field Clerk';
+                document.getElementById('userRoleBadge').innerHTML = roleHtml;
                 buildUI();
             } else {
                 document.getElementById('loginError').innerText = 'Invalid credentials';
             }
-        }
-
-        function toggleMenu() {
-            const menu = document.getElementById('threeDotContent');
-            if (menu) menu.classList.toggle('show');
         }
 
         function buildUI() {
@@ -343,18 +361,18 @@
                 pageContainer.appendChild(pageDiv);
             });
 
-            // Map page content (same for both roles)
+            // Map page
             document.getElementById('page-map').innerHTML = `<div class="map-layout"><div class="side-panel"></div><div class="map-wrapper"><div class="map-container"><div id="map"></div></div><div class="legend"><div><span class="legend-color" style="background:#e74c3c;"></span> Factories</div><div><span class="legend-color" style="background:#27ae60;"></span> Farmers</div><div><span class="legend-color" style="background:#f39c12;"></span> Buying Centers</div><div><span class="legend-color" style="background:#2c5e2e;"></span> Tea Zones</div></div></div></div>`;
             initMap();
 
             if (currentRole === 'clerk') {
                 document.getElementById('page-records').innerHTML = `
                     <div class="flex-content">
-                        <div class="records-grid" style="display:flex; gap:15px; justify-content:center; flex-wrap:wrap;">
-                            <div class="record-card" style="background:white; padding:20px; border-radius:12px; text-align:center; cursor:pointer; width:180px;" onclick="alert('Record Delivery form would open')"><div style="font-size:48px;">🚚</div><div>Record Delivery</div></div>
-                            <div class="record-card" style="background:white; padding:20px; border-radius:12px; text-align:center; cursor:pointer; width:180px;" onclick="alert('Soil Sample form would open')"><div style="font-size:48px;">🌱</div><div>Soil Sample</div></div>
-                            <div class="record-card" style="background:white; padding:20px; border-radius:12px; text-align:center; cursor:pointer; width:180px;" onclick="alert('Fertilizer Distribution form would open')"><div style="font-size:48px;">💊</div><div>Fertilizer Distribution</div></div>
-                            <div class="record-card" style="background:white; padding:20px; border-radius:12px; text-align:center; cursor:pointer; width:180px;" onclick="alert('Carbon Project form would open')"><div style="font-size:48px;">🌿</div><div>Carbon Project</div></div>
+                        <div class="records-grid">
+                            <div class="record-card" onclick="alert('Record Tea Delivery - form would open here')"><div class="record-icon">🚚</div><div>Record Delivery</div></div>
+                            <div class="record-card" onclick="alert('Soil Sample - form would open here')"><div class="record-icon">🌱</div><div>Soil Sample</div></div>
+                            <div class="record-card" onclick="alert('Fertilizer Distribution - form would open here')"><div class="record-icon">💊</div><div>Fertilizer Distribution</div></div>
+                            <div class="record-card" onclick="alert('Carbon Project - form would open here')"><div class="record-icon">🌿</div><div>Carbon Project</div></div>
                         </div>
                     </div>`;
             } else {
@@ -372,8 +390,10 @@
                 renderAdminDashboard();
             }
             // Activate first tab
-            document.querySelectorAll('.page').forEach((p, idx) => { if (idx === 0) p.classList.add('active'); else p.classList.remove('active'); });
-            document.querySelectorAll('.tab')[0].classList.add('active');
+            const pages = document.querySelectorAll('.page');
+            const tabsBtns = document.querySelectorAll('.tab');
+            if (pages.length) pages[0].classList.add('active');
+            if (tabsBtns.length) tabsBtns[0].classList.add('active');
         }
 
         function showPage(pageId) {
@@ -385,6 +405,18 @@
             if (pageId === 'map' && map) setTimeout(() => map.invalidateSize(), 100);
         }
 
+        function exportCSV() {
+            let csv = "Farmers\nID,Name,Phone,Acreage,Zone\n";
+            locations.farmers.forEach(f => csv += `${f.number},${f.name},${f.phone},${f.acres},${locations.teaZones.find(z=>z.id===f.zoneId)?.name}\n`);
+            csv += "\nFertilizer Distributions\nFarmer,Type,Quantity,Date\n";
+            fertilizerDistributions.forEach(d => csv += `${d.farmer},${d.type},${d.qty},${d.date}\n`);
+            const blob = new Blob([csv], {type:'text/csv'});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'ktda_data.csv';
+            a.click();
+        }
+
         // Global functions
         window.doLogin = doLogin;
         window.logout = logout;
@@ -392,15 +424,11 @@
         window.zoomToLocation = zoomToLocation;
         window.switchAdminSubView = switchAdminSubView;
         window.toggleMenu = toggleMenu;
-        window.exportCSV = function() {
-            let csv = "Farmers\nID,Name,Phone,Acreage,Zone\n";
-            locations.farmers.forEach(f => csv += `${f.number},${f.name},${f.phone},${f.acres},${locations.teaZones.find(z=>z.id===f.zoneId)?.name}\n`);
-            const blob = new Blob([csv], {type:'text/csv'});
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = 'ktda_data.csv';
-            a.click();
-        };
+        window.exportCSV = exportCSV;
+        
+        // Close menu when clicking outside
+        document.addEventListener('click', closeMenuOnClickOutside);
+        
         // Allow Enter to login
         document.getElementById('password').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') doLogin();
