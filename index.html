@@ -19,6 +19,7 @@
             justify-content: center;
             align-items: center;
             z-index: 2000;
+            transition: opacity 0.3s;
         }
         .login-card {
             background: white;
@@ -49,7 +50,7 @@
             cursor: pointer;
         }
         .error-msg { color: red; font-size: 14px; margin-top: 10px; }
-        .app-container { display: none; height: 100vh; flex-direction: column; }
+        .app-container { display: flex; height: 100vh; flex-direction: column; }
         .header { background: #2c5e2e; color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; }
         .header h1 { font-size: 18px; display: flex; align-items: center; gap: 8px; }
         .tabs { display: flex; background: white; position: fixed; bottom: 0; left: 0; right: 0; z-index: 100; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); }
@@ -103,7 +104,7 @@
         </div>
     </div>
 
-    <div id="appContainer" class="app-container">
+    <div id="appContainer" class="app-container" style="display: none;">
         <div class="header">
             <h1><i class="fas fa-leaf"></i> KTDA GIS</h1>
             <div><span id="userRoleBadge"></span> <button onclick="logout()" style="background:none; border:none; color:white; margin-left:10px;"><i class="fas fa-sign-out-alt"></i></button></div>
@@ -136,7 +137,7 @@
                 { id: 3, name: "Rukuriri South Zone", acres: 7200, lat: 0.21, lng: 37.53 }
             ]
         };
-        // Additional admin data
+        // Additional admin data (mock)
         let deliveries = [
             { farmer: "James Mwangi", weight: 450, date: "2026-05-20" },
             { farmer: "Mary Wanjiku", weight: 380, date: "2026-05-19" }
@@ -159,6 +160,33 @@
         let pieChart = null;
         let barChart = null;
 
+        // === Utility Functions ===
+        function saveSession() {
+            if (currentRole) localStorage.setItem('ktda_role', currentRole);
+            else localStorage.removeItem('ktda_role');
+        }
+
+        function restoreSession() {
+            const savedRole = localStorage.getItem('ktda_role');
+            if (savedRole && USERS[savedRole]) {
+                currentRole = savedRole;
+                document.getElementById('loginOverlay').style.display = 'none';
+                document.getElementById('appContainer').style.display = 'flex';
+                updateRoleBadge();
+                buildUI();
+                return true;
+            }
+            return false;
+        }
+
+        function updateRoleBadge() {
+            const roleHtml = currentRole === 'admin' ? 
+                '<i class="fas fa-user-shield"></i> Admin <div class="three-dot-menu" onclick="toggleMenu(event)"><i class="fas fa-ellipsis-v"></i><div id="threeDotContent" class="three-dot-content"><a onclick="switchAdminSubView(\'farmers\')">👨‍🌾 Farmers</a><a onclick="switchAdminSubView(\'fertilizer\')">💊 Fertilizer Assets</a><a onclick="switchAdminSubView(\'carbon\')">🌿 Carbon & SOC</a><a onclick="switchAdminSubView(\'reports\')">📄 Reports</a></div></div>' : 
+                '<i class="fas fa-clipboard-list"></i> Field Clerk';
+            document.getElementById('userRoleBadge').innerHTML = roleHtml;
+        }
+
+        // Map functions
         function getZoneCenter(zoneId) {
             const zone = locations.teaZones.find(z => z.id === zoneId);
             return zone ? { lat: zone.lat, lng: zone.lng } : null;
@@ -242,6 +270,7 @@
             renderSidePanels();
         }
 
+        // Admin dashboard
         function updateAdminCharts() {
             const ctx1 = document.getElementById('pieChart')?.getContext('2d');
             const ctx2 = document.getElementById('barChart')?.getContext('2d');
@@ -278,9 +307,9 @@
             if (adminSubView === 'farmers') {
                 tableHtml = `<h3>Farmers List</h3><table class="data-table"><thead><tr><th>ID</th><th>Name</th><th>Phone</th><th>Acreage</th><th>Zone</th></tr></thead><tbody>${locations.farmers.map(f => `<tr><td>${f.number}</td><td>${f.name}</td><td>${f.phone}</td><td>${f.acres}</td><td>${locations.teaZones.find(z=>z.id===f.zoneId)?.name}</td></tr>`).join('')}</tbody></table>`;
             } else if (adminSubView === 'fertilizer') {
-                tableHtml = `<h3>Fertilizer Assets</h3><table class="data-table"><thead><tr><th>Farmer</th><th>Type</th><th>Quantity (kg)</th><th>Date</th></tr></thead><tbody>${fertilizerDistributions.map(d => `<tr><td>${d.farmer}</td><td>${d.type}</td><td>${d.qty}</td><td>${d.date}</td></tr>`).join('')}</tbody></table>`;
+                tableHtml = `<h3>Fertilizer Assets</h3><table class="data-table"><thead><tr><th>Farmer</th><th>Type</th><th>Quantity (kg)</th><th>Date</th></tr></thead><tbody>${fertilizerDistributions.map(d => `<tr><td>${d.farmer}</td><td>${d.type}</td><td>${d.qty}</td><td>${d.date}</td></tr>`).join('')}</tbody><tr>`;
             } else if (adminSubView === 'carbon') {
-                tableHtml = `<h3>Carbon & SOC Projects</h3><table class="data-table"><thead><tr><th>Project</th><th>Methodology</th><th>Area (ha)</th><th>Est. Credits</th><th>Status</th><th>Issued</th></tr></thead><tbody>${carbonProjects.map(p => `<tr><td>${p.name}</td><td>${p.methodology}</td><td>${p.areaHa}</td><td>${p.estCredits}</td><td>${p.status}</td><td>${p.issued}</td><tr>`).join('')}</tbody></table>`;
+                tableHtml = `<h3>Carbon & SOC Projects</h3><table class="data-table"><thead><tr><th>Project</th><th>Methodology</th><th>Area (ha)</th><th>Est. Credits</th><th>Status</th><th>Issued</th></tr></thead><tbody>${carbonProjects.map(p => `<tr><td>${p.name}</td><td>${p.methodology}</td><td>${p.areaHa}</td><td>${p.estCredits}</td><td>${p.status}</td><td>${p.issued}</td></tr>`).join('')}</tbody></table>`;
             } else {
                 tableHtml = `<h3>Reports</h3><button class="print-btn" onclick="window.print()">Print Dashboard</button><button onclick="exportCSV()">Export CSV</button>`;
             }
@@ -290,7 +319,6 @@
 
         function switchAdminSubView(view) {
             adminSubView = view;
-            // Close the menu after selection
             const menu = document.getElementById('threeDotContent');
             if (menu) menu.classList.remove('show');
             renderAdminDashboard();
@@ -311,11 +339,12 @@
         }
 
         function logout() {
-            document.getElementById('loginOverlay').style.display = 'flex';
-            document.getElementById('appContainer').style.display = 'none';
+            currentRole = null;
+            localStorage.removeItem('ktda_role');
             if (map) map.remove();
             map = null;
-            currentRole = null;
+            document.getElementById('loginOverlay').style.display = 'flex';
+            document.getElementById('appContainer').style.display = 'none';
         }
 
         function doLogin() {
@@ -323,12 +352,10 @@
             const password = document.getElementById('password').value;
             if (USERS[username] && USERS[username].password === password) {
                 currentRole = USERS[username].role;
+                saveSession();
                 document.getElementById('loginOverlay').style.display = 'none';
                 document.getElementById('appContainer').style.display = 'flex';
-                const roleHtml = currentRole === 'admin' ? 
-                    '<i class="fas fa-user-shield"></i> Admin <div class="three-dot-menu" onclick="toggleMenu(event)"><i class="fas fa-ellipsis-v"></i><div id="threeDotContent" class="three-dot-content"><a onclick="switchAdminSubView(\'farmers\')">👨‍🌾 Farmers</a><a onclick="switchAdminSubView(\'fertilizer\')">💊 Fertilizer Assets</a><a onclick="switchAdminSubView(\'carbon\')">🌿 Carbon & SOC</a><a onclick="switchAdminSubView(\'reports\')">📄 Reports</a></div></div>' : 
-                    '<i class="fas fa-clipboard-list"></i> Field Clerk';
-                document.getElementById('userRoleBadge').innerHTML = roleHtml;
+                updateRoleBadge();
                 buildUI();
             } else {
                 document.getElementById('loginError').innerText = 'Invalid credentials';
@@ -432,6 +459,14 @@
         // Allow Enter to login
         document.getElementById('password').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') doLogin();
+        });
+
+        // Restore session on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            if (!restoreSession()) {
+                document.getElementById('loginOverlay').style.display = 'flex';
+                document.getElementById('appContainer').style.display = 'none';
+            }
         });
     </script>
 </body>
