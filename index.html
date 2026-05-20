@@ -19,7 +19,6 @@
             justify-content: center;
             align-items: center;
             z-index: 2000;
-            transition: opacity 0.3s;
         }
         .login-card {
             background: white;
@@ -50,7 +49,7 @@
             cursor: pointer;
         }
         .error-msg { color: red; font-size: 14px; margin-top: 10px; }
-        .app-container { display: flex; height: 100vh; flex-direction: column; }
+        .app-container { display: none; height: 100vh; flex-direction: column; }
         .header { background: #2c5e2e; color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; }
         .header h1 { font-size: 18px; display: flex; align-items: center; gap: 8px; }
         .tabs { display: flex; background: white; position: fixed; bottom: 0; left: 0; right: 0; z-index: 100; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); }
@@ -89,6 +88,11 @@
         .record-card { background: white; padding: 25px; border-radius: 12px; text-align: center; cursor: pointer; width: 180px; transition: transform 0.2s; }
         .record-card:hover { transform: translateY(-5px); background: #e8f5e9; }
         .record-icon { font-size: 48px; margin-bottom: 10px; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center; }
+        .modal-content { background: white; border-radius: 16px; padding: 20px; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .close-modal { font-size: 24px; cursor: pointer; }
+        input, select, textarea { width: 100%; padding: 8px; margin: 8px 0; border: 1px solid #ddd; border-radius: 6px; }
         @media (max-width: 768px) { .side-panel { width: 240px; } .stat-card { min-width: 120px; } }
     </style>
 </head>
@@ -104,7 +108,7 @@
         </div>
     </div>
 
-    <div id="appContainer" class="app-container" style="display: none;">
+    <div id="appContainer" class="app-container">
         <div class="header">
             <h1><i class="fas fa-leaf"></i> KTDA GIS</h1>
             <div><span id="userRoleBadge"></span> <button onclick="logout()" style="background:none; border:none; color:white; margin-left:10px;"><i class="fas fa-sign-out-alt"></i></button></div>
@@ -113,8 +117,19 @@
         <div id="pageContainer"></div>
     </div>
 
+    <!-- Modal for record forms -->
+    <div id="recordModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Record</h3>
+                <span class="close-modal" onclick="closeModal()">&times;</span>
+            </div>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+
     <script>
-        // Data (mock)
+        // Shared data (mock + user-added)
         const locations = {
             factories: [
                 { id: 1, name: "Rukuriri Tea Factory", region: "Meru", lat: 0.2345, lng: 37.5678, capacity: 120000, zoneId: 1 },
@@ -137,11 +152,11 @@
                 { id: 3, name: "Rukuriri South Zone", acres: 7200, lat: 0.21, lng: 37.53 }
             ]
         };
-        // Additional admin data (mock)
         let deliveries = [
-            { farmer: "James Mwangi", weight: 450, date: "2026-05-20" },
-            { farmer: "Mary Wanjiku", weight: 380, date: "2026-05-19" }
+            { farmer: "James Mwangi", weight: 450, date: "2026-05-20", grade: "A" },
+            { farmer: "Mary Wanjiku", weight: 380, date: "2026-05-19", grade: "B" }
         ];
+        let soilSamples = [];
         let fertilizerDistributions = [
             { farmer: "James Mwangi", type: "NPK 25:5:5", qty: 50, date: "2026-05-15" },
             { farmer: "Mary Wanjiku", type: "CAN", qty: 40, date: "2026-05-16" }
@@ -159,45 +174,43 @@
         let adminSubView = 'farmers';
         let pieChart = null;
         let barChart = null;
+        let isLoggedIn = false;
 
-        // === Utility Functions ===
-        function saveSession() {
-            if (currentRole) localStorage.setItem('ktda_role', currentRole);
-            else localStorage.removeItem('ktda_role');
+        // Persistence keys (unchanged)
+        const STORAGE_KEY = 'ktda_auth';
+        const STORAGE_ROLE = 'ktda_role';
+        const STORAGE_FILTER = 'ktda_filter_zone';
+        const STORAGE_ADMIN_VIEW = 'ktda_admin_view';
+
+        function saveLoginState(role, filterZone, adminView) {
+            localStorage.setItem(STORAGE_KEY, 'true');
+            localStorage.setItem(STORAGE_ROLE, role);
+            if (filterZone !== undefined) localStorage.setItem(STORAGE_FILTER, filterZone);
+            if (adminView !== undefined) localStorage.setItem(STORAGE_ADMIN_VIEW, adminView);
         }
-
-        function restoreSession() {
-            const savedRole = localStorage.getItem('ktda_role');
-            if (savedRole && USERS[savedRole]) {
-                currentRole = savedRole;
-                document.getElementById('loginOverlay').style.display = 'none';
-                document.getElementById('appContainer').style.display = 'flex';
-                updateRoleBadge();
-                buildUI();
-                return true;
+        function clearLoginState() { localStorage.clear(); }
+        function loadLoginState() {
+            const logged = localStorage.getItem(STORAGE_KEY) === 'true';
+            if (logged) {
+                const role = localStorage.getItem(STORAGE_ROLE);
+                const filterZone = localStorage.getItem(STORAGE_FILTER);
+                const adminView = localStorage.getItem(STORAGE_ADMIN_VIEW);
+                return { logged: true, role, filterZone: filterZone ? parseInt(filterZone) : null, adminView: adminView || 'farmers' };
             }
-            return false;
+            return { logged: false };
         }
 
-        function updateRoleBadge() {
-            const roleHtml = currentRole === 'admin' ? 
-                '<i class="fas fa-user-shield"></i> Admin <div class="three-dot-menu" onclick="toggleMenu(event)"><i class="fas fa-ellipsis-v"></i><div id="threeDotContent" class="three-dot-content"><a onclick="switchAdminSubView(\'farmers\')">👨‍🌾 Farmers</a><a onclick="switchAdminSubView(\'fertilizer\')">💊 Fertilizer Assets</a><a onclick="switchAdminSubView(\'carbon\')">🌿 Carbon & SOC</a><a onclick="switchAdminSubView(\'reports\')">📄 Reports</a></div></div>' : 
-                '<i class="fas fa-clipboard-list"></i> Field Clerk';
-            document.getElementById('userRoleBadge').innerHTML = roleHtml;
-        }
-
-        // Map functions
+        // Map functions (unchanged)
         function getZoneCenter(zoneId) {
             const zone = locations.teaZones.find(z => z.id === zoneId);
             return zone ? { lat: zone.lat, lng: zone.lng } : null;
         }
-
         function filterMarkersByZone(zoneId) {
             currentFilterZone = zoneId;
+            if (isLoggedIn) saveLoginState(currentRole, zoneId, adminSubView);
             updateMapMarkers();
             renderSidePanels();
         }
-
         function updateMapMarkers() {
             if (!map) return;
             markers.factories.forEach(m => map.removeLayer(m));
@@ -205,12 +218,10 @@
             markers.centers.forEach(m => map.removeLayer(m));
             markers.zones.forEach(m => map.removeLayer(m));
             markers = { factories: [], farmers: [], centers: [], zones: [] };
-
             let filteredFactories = currentFilterZone ? locations.factories.filter(f => f.zoneId === currentFilterZone) : locations.factories;
             let filteredFarmers = currentFilterZone ? locations.farmers.filter(f => f.zoneId === currentFilterZone) : locations.farmers;
             let filteredCenters = currentFilterZone ? locations.centers.filter(c => c.zoneId === currentFilterZone) : locations.centers;
             let filteredZones = currentFilterZone ? locations.teaZones.filter(z => z.id === currentFilterZone) : locations.teaZones;
-
             filteredFactories.forEach(f => {
                 const marker = L.marker([f.lat, f.lng], { icon: L.divIcon({ html: '<div style="background:#e74c3c; width:12px; height:12px; border-radius:50%; border:2px solid white;"></div>', iconSize: [12,12] }) }).addTo(map);
                 marker.bindPopup(`<b>🏭 ${f.name}</b><br>Region: ${f.region}<br>Capacity: ${f.capacity.toLocaleString()} kg/day`);
@@ -235,7 +246,6 @@
                 }
             });
         }
-
         function renderSidePanels() {
             const sidePanel = document.querySelector('.side-panel');
             if (!sidePanel) return;
@@ -243,12 +253,8 @@
             const factories = currentFilterZone ? locations.factories.filter(f => f.zoneId === currentFilterZone) : locations.factories;
             const farmers = currentFilterZone ? locations.farmers.filter(f => f.zoneId === currentFilterZone) : locations.farmers;
             const centers = currentFilterZone ? locations.centers.filter(c => c.zoneId === currentFilterZone) : locations.centers;
-
-            let html = `<div class="panel-title">Filter by Tea Zone</div>`;
-            html += `<div><button class="filter-btn ${!currentFilterZone ? 'filter-active' : ''}" onclick="filterMarkersByZone(null)">All Zones</button>`;
-            zones.forEach(z => {
-                html += `<button class="filter-btn ${currentFilterZone === z.id ? 'filter-active' : ''}" onclick="filterMarkersByZone(${z.id})">${z.name}</button>`;
-            });
+            let html = `<div class="panel-title">Filter by Tea Zone</div><div><button class="filter-btn ${!currentFilterZone ? 'filter-active' : ''}" onclick="filterMarkersByZone(null)">All Zones</button>`;
+            zones.forEach(z => html += `<button class="filter-btn ${currentFilterZone === z.id ? 'filter-active' : ''}" onclick="filterMarkersByZone(${z.id})">${z.name}</button>`);
             html += `</div><div class="panel-title">Factories</div>`;
             factories.forEach(f => html += `<div class="list-item" onclick="zoomToLocation(${f.lat}, ${f.lng})"><div class="item-name">🏭 ${f.name}</div><div class="item-detail">${f.region}</div></div>`);
             html += `<div class="panel-title">Farmers</div>`;
@@ -257,11 +263,7 @@
             centers.forEach(c => html += `<div class="list-item" onclick="zoomToLocation(${c.lat}, ${c.lng})"><div class="item-name">📍 ${c.name}</div><div class="item-detail">Factory: ${c.factory}</div></div>`);
             sidePanel.innerHTML = html;
         }
-
-        function zoomToLocation(lat, lng) {
-            if (map) map.setView([lat, lng], 14);
-        }
-
+        function zoomToLocation(lat, lng) { if (map) map.setView([lat, lng], 14); }
         function initMap() {
             if (map) return;
             map = L.map('map').setView([0.5, 36.5], 8);
@@ -270,14 +272,13 @@
             renderSidePanels();
         }
 
-        // Admin dashboard
+        // Admin dashboard functions
         function updateAdminCharts() {
             const ctx1 = document.getElementById('pieChart')?.getContext('2d');
             const ctx2 = document.getElementById('barChart')?.getContext('2d');
             if (!ctx1) return;
             if (pieChart) pieChart.destroy();
             if (barChart) barChart.destroy();
-            
             let labels, data;
             if (adminSubView === 'farmers') {
                 const zoneFarmers = {};
@@ -299,7 +300,6 @@
             pieChart = new Chart(ctx1, { type: 'pie', data: { labels: labels, datasets: [{ data: data, backgroundColor: ['#4CAF50','#FF9800','#2196F3','#e74c3c'] }] } });
             barChart = new Chart(ctx2, { type: 'bar', data: { labels: labels, datasets: [{ label: 'Value', data: data, backgroundColor: '#4CAF50' }] } });
         }
-
         function renderAdminDashboard() {
             const container = document.getElementById('adminDashboardContent');
             if (!container) return;
@@ -307,7 +307,7 @@
             if (adminSubView === 'farmers') {
                 tableHtml = `<h3>Farmers List</h3><table class="data-table"><thead><tr><th>ID</th><th>Name</th><th>Phone</th><th>Acreage</th><th>Zone</th></tr></thead><tbody>${locations.farmers.map(f => `<tr><td>${f.number}</td><td>${f.name}</td><td>${f.phone}</td><td>${f.acres}</td><td>${locations.teaZones.find(z=>z.id===f.zoneId)?.name}</td></tr>`).join('')}</tbody></table>`;
             } else if (adminSubView === 'fertilizer') {
-                tableHtml = `<h3>Fertilizer Assets</h3><table class="data-table"><thead><tr><th>Farmer</th><th>Type</th><th>Quantity (kg)</th><th>Date</th></tr></thead><tbody>${fertilizerDistributions.map(d => `<tr><td>${d.farmer}</td><td>${d.type}</td><td>${d.qty}</td><td>${d.date}</td></tr>`).join('')}</tbody><tr>`;
+                tableHtml = `<h3>Fertilizer Assets</h3><table class="data-table"><thead><tr><th>Farmer</th><th>Type</th><th>Quantity (kg)</th><th>Date</th></tr></thead><tbody>${fertilizerDistributions.map(d => `<tr><td>${d.farmer}</td><td>${d.type}</td><td>${d.qty}</td><td>${d.date}</td></tr>`).join('')}</tbody></table>`;
             } else if (adminSubView === 'carbon') {
                 tableHtml = `<h3>Carbon & SOC Projects</h3><table class="data-table"><thead><tr><th>Project</th><th>Methodology</th><th>Area (ha)</th><th>Est. Credits</th><th>Status</th><th>Issued</th></tr></thead><tbody>${carbonProjects.map(p => `<tr><td>${p.name}</td><td>${p.methodology}</td><td>${p.areaHa}</td><td>${p.estCredits}</td><td>${p.status}</td><td>${p.issued}</td></tr>`).join('')}</tbody></table>`;
             } else {
@@ -316,58 +316,148 @@
             container.innerHTML = tableHtml;
             updateAdminCharts();
         }
-
         function switchAdminSubView(view) {
             adminSubView = view;
+            if (isLoggedIn && currentRole === 'admin') saveLoginState(currentRole, currentFilterZone, view);
             const menu = document.getElementById('threeDotContent');
             if (menu) menu.classList.remove('show');
             renderAdminDashboard();
         }
-
         function toggleMenu(e) {
             e.stopPropagation();
             const menu = document.getElementById('threeDotContent');
             if (menu) menu.classList.toggle('show');
         }
-
         function closeMenuOnClickOutside(event) {
             const menu = document.getElementById('threeDotContent');
             const dotMenu = document.querySelector('.three-dot-menu');
-            if (menu && dotMenu && !dotMenu.contains(event.target)) {
-                menu.classList.remove('show');
+            if (menu && dotMenu && !dotMenu.contains(event.target)) menu.classList.remove('show');
+        }
+
+        // Record forms (clerk)
+        let currentRecordType = '';
+        function openModal(type) {
+            currentRecordType = type;
+            const modal = document.getElementById('recordModal');
+            const title = document.getElementById('modalTitle');
+            const body = document.getElementById('modalBody');
+            if (type === 'delivery') {
+                title.innerText = 'Record Tea Delivery';
+                body.innerHTML = `
+                    <label>Farmer</label><select id="deliveryFarmer">${locations.farmers.map(f => `<option value="${f.name}">${f.name}</option>`).join('')}</select>
+                    <label>Weight (kg)</label><input type="number" id="deliveryWeight" placeholder="kg">
+                    <label>Leaf Grade</label><select id="deliveryGrade"><option>A</option><option>B</option><option>C</option></select>
+                    <button onclick="submitDelivery()">Submit</button>
+                `;
+            } else if (type === 'soil') {
+                title.innerText = 'Record Soil Sample';
+                body.innerHTML = `
+                    <label>Farmer / Location</label><input id="soilLocation" placeholder="Farm name or ID">
+                    <label>Organic Carbon (%)</label><input type="number" step="0.1" id="soilOC">
+                    <label>pH</label><input type="number" step="0.1" id="soilPH">
+                    <label>Nitrogen (mg/kg)</label><input type="number" id="soilN">
+                    <button onclick="submitSoilSample()">Submit</button>
+                `;
+            } else if (type === 'fertilizer') {
+                title.innerText = 'Record Fertilizer Distribution';
+                body.innerHTML = `
+                    <label>Farmer</label><select id="fertFarmer">${locations.farmers.map(f => `<option value="${f.name}">${f.name}</option>`).join('')}</select>
+                    <label>Fertilizer Type</label><select id="fertType"><option>NPK 25:5:5</option><option>CAN</option><option>Urea</option></select>
+                    <label>Quantity (kg)</label><input type="number" id="fertQty">
+                    <button onclick="submitFertilizer()">Submit</button>
+                `;
+            } else if (type === 'carbon') {
+                title.innerText = 'Register Carbon Project';
+                body.innerHTML = `
+                    <label>Project Name</label><input id="carbonName" placeholder="Project name">
+                    <label>Methodology</label><select id="carbonMethod"><option>VM0042 (SOC)</option><option>VM0047 (ARR)</option></select>
+                    <label>Area (ha)</label><input type="number" id="carbonArea">
+                    <button onclick="submitCarbonProject()">Register</button>
+                `;
             }
+            modal.style.display = 'flex';
+        }
+        function closeModal() { document.getElementById('recordModal').style.display = 'none'; }
+
+        function submitDelivery() {
+            const farmer = document.getElementById('deliveryFarmer').value;
+            const weight = parseFloat(document.getElementById('deliveryWeight').value);
+            const grade = document.getElementById('deliveryGrade').value;
+            if (!farmer || isNaN(weight) || weight <= 0) { alert("Enter valid weight"); return; }
+            deliveries.push({ farmer, weight, date: new Date().toISOString().split('T')[0], grade });
+            alert("Delivery recorded!");
+            closeModal();
+            if (currentRole === 'admin') { renderAdminDashboard(); }
+        }
+        function submitSoilSample() {
+            const location = document.getElementById('soilLocation').value;
+            const oc = parseFloat(document.getElementById('soilOC').value);
+            if (!location || isNaN(oc)) { alert("Enter location and OC%"); return; }
+            soilSamples.push({
+                location, oc,
+                ph: document.getElementById('soilPH').value,
+                n: document.getElementById('soilN').value,
+                date: new Date().toISOString()
+            });
+            alert("Soil sample recorded!");
+            closeModal();
+        }
+        function submitFertilizer() {
+            const farmer = document.getElementById('fertFarmer').value;
+            const qty = parseFloat(document.getElementById('fertQty').value);
+            const type = document.getElementById('fertType').value;
+            if (!farmer || isNaN(qty) || qty <= 0) { alert("Enter valid quantity"); return; }
+            fertilizerDistributions.push({ farmer, type, qty, date: new Date().toISOString().split('T')[0] });
+            alert("Fertilizer distribution recorded!");
+            closeModal();
+            if (currentRole === 'admin') { renderAdminDashboard(); }
+        }
+        function submitCarbonProject() {
+            const name = document.getElementById('carbonName').value;
+            const area = parseFloat(document.getElementById('carbonArea').value);
+            const methodology = document.getElementById('carbonMethod').value;
+            if (!name || isNaN(area) || area <= 0) { alert("Enter name and area"); return; }
+            const newId = carbonProjects.length + 1;
+            carbonProjects.push({
+                id: newId, name, methodology: methodology === "VM0042 (SOC)" ? "VM0042" : "VM0047",
+                areaHa: area, estCredits: area * 5, status: "Pending", issued: 0
+            });
+            alert("Carbon project registered!");
+            closeModal();
+            if (currentRole === 'admin') { renderAdminDashboard(); }
         }
 
         function logout() {
-            currentRole = null;
-            localStorage.removeItem('ktda_role');
-            if (map) map.remove();
-            map = null;
+            clearLoginState();
+            isLoggedIn = false;
+            if (map) { map.remove(); map = null; }
             document.getElementById('loginOverlay').style.display = 'flex';
             document.getElementById('appContainer').style.display = 'none';
+            currentRole = null;
         }
-
         function doLogin() {
             const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
             if (USERS[username] && USERS[username].password === password) {
                 currentRole = USERS[username].role;
-                saveSession();
+                isLoggedIn = true;
+                saveLoginState(currentRole, null, 'farmers');
                 document.getElementById('loginOverlay').style.display = 'none';
                 document.getElementById('appContainer').style.display = 'flex';
-                updateRoleBadge();
+                const roleHtml = currentRole === 'admin' ? 
+                    '<i class="fas fa-user-shield"></i> Admin <div class="three-dot-menu" onclick="toggleMenu(event)"><i class="fas fa-ellipsis-v"></i><div id="threeDotContent" class="three-dot-content"><a onclick="switchAdminSubView(\'farmers\')">👨‍🌾 Farmers</a><a onclick="switchAdminSubView(\'fertilizer\')">💊 Fertilizer Assets</a><a onclick="switchAdminSubView(\'carbon\')">🌿 Carbon & SOC</a><a onclick="switchAdminSubView(\'reports\')">📄 Reports</a></div></div>' : 
+                    '<i class="fas fa-clipboard-list"></i> Field Clerk';
+                document.getElementById('userRoleBadge').innerHTML = roleHtml;
                 buildUI();
             } else {
                 document.getElementById('loginError').innerText = 'Invalid credentials';
             }
         }
-
         function buildUI() {
             const tabsContainer = document.getElementById('tabsContainer');
             const pageContainer = document.getElementById('pageContainer');
             tabsContainer.innerHTML = '';
             pageContainer.innerHTML = '';
-
             let tabs = currentRole === 'admin' ? [
                 { id: 'map', label: '🗺️ Map', icon: 'map' },
                 { id: 'dashboard', label: '📊 Dashboard', icon: 'chart-line' }
@@ -375,7 +465,6 @@
                 { id: 'map', label: '🗺️ Map', icon: 'map' },
                 { id: 'records', label: '📋 Records', icon: 'clipboard-list' }
             ];
-
             tabs.forEach(tab => {
                 const btn = document.createElement('div');
                 btn.className = 'tab';
@@ -387,19 +476,16 @@
                 pageDiv.className = 'page';
                 pageContainer.appendChild(pageDiv);
             });
-
-            // Map page
             document.getElementById('page-map').innerHTML = `<div class="map-layout"><div class="side-panel"></div><div class="map-wrapper"><div class="map-container"><div id="map"></div></div><div class="legend"><div><span class="legend-color" style="background:#e74c3c;"></span> Factories</div><div><span class="legend-color" style="background:#27ae60;"></span> Farmers</div><div><span class="legend-color" style="background:#f39c12;"></span> Buying Centers</div><div><span class="legend-color" style="background:#2c5e2e;"></span> Tea Zones</div></div></div></div>`;
             initMap();
-
             if (currentRole === 'clerk') {
                 document.getElementById('page-records').innerHTML = `
                     <div class="flex-content">
                         <div class="records-grid">
-                            <div class="record-card" onclick="alert('Record Tea Delivery - form would open here')"><div class="record-icon">🚚</div><div>Record Delivery</div></div>
-                            <div class="record-card" onclick="alert('Soil Sample - form would open here')"><div class="record-icon">🌱</div><div>Soil Sample</div></div>
-                            <div class="record-card" onclick="alert('Fertilizer Distribution - form would open here')"><div class="record-icon">💊</div><div>Fertilizer Distribution</div></div>
-                            <div class="record-card" onclick="alert('Carbon Project - form would open here')"><div class="record-icon">🌿</div><div>Carbon Project</div></div>
+                            <div class="record-card" onclick="openModal('delivery')"><div class="record-icon">🚚</div><div>Record Delivery</div></div>
+                            <div class="record-card" onclick="openModal('soil')"><div class="record-icon">🌱</div><div>Soil Sample</div></div>
+                            <div class="record-card" onclick="openModal('fertilizer')"><div class="record-icon">💊</div><div>Fertilizer Distribution</div></div>
+                            <div class="record-card" onclick="openModal('carbon')"><div class="record-icon">🌿</div><div>Carbon Project</div></div>
                         </div>
                     </div>`;
             } else {
@@ -416,22 +502,21 @@
                     </div>`;
                 renderAdminDashboard();
             }
-            // Activate first tab
             const pages = document.querySelectorAll('.page');
             const tabsBtns = document.querySelectorAll('.tab');
             if (pages.length) pages[0].classList.add('active');
             if (tabsBtns.length) tabsBtns[0].classList.add('active');
+            if (currentFilterZone) filterMarkersByZone(currentFilterZone);
         }
-
         function showPage(pageId) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            document.getElementById(`page-${pageId}`).classList.add('active');
+            const target = document.getElementById(`page-${pageId}`);
+            if (target) target.classList.add('active');
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             const activeTab = Array.from(document.querySelectorAll('.tab')).find(t => t.innerText.toLowerCase().includes(pageId));
             if (activeTab) activeTab.classList.add('active');
             if (pageId === 'map' && map) setTimeout(() => map.invalidateSize(), 100);
         }
-
         function exportCSV() {
             let csv = "Farmers\nID,Name,Phone,Acreage,Zone\n";
             locations.farmers.forEach(f => csv += `${f.number},${f.name},${f.phone},${f.acres},${locations.teaZones.find(z=>z.id===f.zoneId)?.name}\n`);
@@ -444,6 +529,25 @@
             a.click();
         }
 
+        // Initialize
+        const savedState = loadLoginState();
+        if (savedState.logged) {
+            currentRole = savedState.role;
+            isLoggedIn = true;
+            currentFilterZone = savedState.filterZone;
+            adminSubView = savedState.adminView || 'farmers';
+            document.getElementById('loginOverlay').style.display = 'none';
+            document.getElementById('appContainer').style.display = 'flex';
+            const roleHtml = currentRole === 'admin' ? 
+                '<i class="fas fa-user-shield"></i> Admin <div class="three-dot-menu" onclick="toggleMenu(event)"><i class="fas fa-ellipsis-v"></i><div id="threeDotContent" class="three-dot-content"><a onclick="switchAdminSubView(\'farmers\')">👨‍🌾 Farmers</a><a onclick="switchAdminSubView(\'fertilizer\')">💊 Fertilizer Assets</a><a onclick="switchAdminSubView(\'carbon\')">🌿 Carbon & SOC</a><a onclick="switchAdminSubView(\'reports\')">📄 Reports</a></div></div>' : 
+                '<i class="fas fa-clipboard-list"></i> Field Clerk';
+            document.getElementById('userRoleBadge').innerHTML = roleHtml;
+            buildUI();
+        } else {
+            document.getElementById('loginOverlay').style.display = 'flex';
+            document.getElementById('appContainer').style.display = 'none';
+        }
+
         // Global functions
         window.doLogin = doLogin;
         window.logout = logout;
@@ -452,22 +556,14 @@
         window.switchAdminSubView = switchAdminSubView;
         window.toggleMenu = toggleMenu;
         window.exportCSV = exportCSV;
-        
-        // Close menu when clicking outside
+        window.openModal = openModal;
+        window.closeModal = closeModal;
+        window.submitDelivery = submitDelivery;
+        window.submitSoilSample = submitSoilSample;
+        window.submitFertilizer = submitFertilizer;
+        window.submitCarbonProject = submitCarbonProject;
         document.addEventListener('click', closeMenuOnClickOutside);
-        
-        // Allow Enter to login
-        document.getElementById('password').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') doLogin();
-        });
-
-        // Restore session on page load
-        window.addEventListener('DOMContentLoaded', () => {
-            if (!restoreSession()) {
-                document.getElementById('loginOverlay').style.display = 'flex';
-                document.getElementById('appContainer').style.display = 'none';
-            }
-        });
+        document.getElementById('password').addEventListener('keypress', function(e) { if (e.key === 'Enter') doLogin(); });
     </script>
 </body>
 </html>
