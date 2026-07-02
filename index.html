@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-    <title>KTDA GIS � Carbon, Soil & Fertilizer Management</title>
+    <title>KTDA GIS – Carbon, Soil & Fertilizer Management</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -49,17 +49,18 @@
             cursor: pointer;
         }
         .error-msg { color: red; font-size: 14px; margin-top: 10px; }
-        .app-container { display: none; height: 100dvh; overflow: hidden;  flex-direction: column; overflow: hidden; }
+        .app-container { display: none; height: 100dvh; flex-direction: column; overflow: hidden; }
         .header { background: #2c5e2e; color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
         .header h1 { font-size: 18px; display: flex; align-items: center; gap: 8px; }
-        .tabs { position: fixed !important; bottom: env(safe-area-inset-bottom, 0px) !important; z-index: 99999 !important; 
+        /* TABS – ALWAYS ON TOP */
+        .tabs {
             display: flex;
             background: white;
-            position: fixed;
+            position: fixed !important;
             bottom: env(safe-area-inset-bottom, 0px) !important;
-            left: 0;
-            right: 0;
-            z-index: 9999 !important;
+            left: 0 !important;
+            right: 0 !important;
+            z-index: 99999 !important;
             box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
             flex-shrink: 0;
         }
@@ -83,15 +84,31 @@
         .data-table th { background: #2c5e2e; color: white; }
         button { background: #2c5e2e; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; margin: 5px; }
         .print-btn { background: #2196f3; }
-        .map-layout { position: relative; z-index: 1;  display: flex; height: 100%; width: 100%; position: relative; z-index: 1; }
-        .side-panel { position: relative; z-index: 5;  width: 280px; background: white; border-right: 1px solid #ddd; overflow-y: auto; padding: 10px; position: relative; z-index: 5; }
+        /* MAP LAYOUT – side panel above map */
+        .map-layout {
+            display: flex;
+            height: 100%;
+            width: 100%;
+            position: relative;
+            z-index: 1;
+        }
+        .side-panel {
+            width: 280px;
+            background: white;
+            border-right: 1px solid #ddd;
+            overflow-y: auto;
+            padding: 10px;
+            position: relative;
+            z-index: 5 !important;
+            flex-shrink: 0;
+        }
         .panel-title { font-size: 16px; font-weight: bold; color: #2c5e2e; margin: 10px 0; border-bottom: 2px solid #2c5e2e; }
         .filter-btn { background: #2c5e2e; color: white; border: none; padding: 5px 10px; border-radius: 20px; margin: 5px; cursor: pointer; font-size: 12px; }
         .filter-active { background: #1e3a1f; }
         .list-item { padding: 8px; margin-bottom: 6px; background: #f9f9f9; border-radius: 6px; cursor: pointer; border-left: 3px solid #2c5e2e; }
         .list-item:hover { background: #e8f5e9; transform: translateX(3px); }
-        .map-wrapper { position: relative; z-index: 1;  flex: 1; position: relative; z-index: 1; }
-        .map-container { position: relative; z-index: 0;  height: 100%; max-height: calc(100% - 0px);  width: 100%; position: relative; z-index: 0; }
+        .map-wrapper { flex: 1; position: relative; z-index: 1; min-height: 0; }
+        .map-container { height: 100%; width: 100%; position: relative; z-index: 0; }
         #map { height: 100%; width: 100%; }
         .legend {
             position: absolute;
@@ -101,7 +118,7 @@
             padding: 8px 12px;
             border-radius: 8px;
             font-size: 11px;
-            z-index: 1000;
+            z-index: 100;
         }
         .legend-color { width: 12px; height: 12px; display: inline-block; margin-right: 5px; border-radius: 2px; }
         .three-dot-menu { position: relative; display: inline-block; margin-left: 10px; cursor: pointer; }
@@ -118,26 +135,13 @@
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .close-modal { font-size: 24px; cursor: pointer; }
         input, select, textarea { width: 100%; padding: 8px; margin: 8px 0; border: 1px solid #ddd; border-radius: 6px; }
-        @media (max-width: 768px) { .side-panel { position: relative; z-index: 5;  width: 280px; background: white; border-right: 1px solid #ddd; overflow-y: auto; padding: 10px; position: relative; z-index: 5; } .stat-card { min-width: 120px; } }
-    /* FORCE tabs above everything */
-.tabs { position: fixed !important; bottom: env(safe-area-inset-bottom, 0px) !important; z-index: 99999 !important; 
-    z-index: 9999 !important;
-    position: fixed !important;
-    bottom: env(safe-area-inset-bottom, 0px) !important;
-}
-/* Ensure map never covers the tabs */
-.map-wrapper, .map-container, #map {
-    pointer-events: auto; /* keep map interactive */
-}
-.page-map .map-layout {
-    padding-bottom: 50px; /* leave space for tabs */
-}
-
+        @media (max-width: 768px) { .side-panel { width: 240px; } .stat-card { min-width: 120px; } }
+    </style>
 </head>
 <body>
     <div id="loginOverlay" class="login-overlay">
         <div class="login-card">
-            <h2>?? KTDA GIS</h2>
+            <h2>🌍 KTDA GIS</h2>
             <input type="text" id="username" placeholder="Username" autocomplete="off">
             <input type="password" id="password" placeholder="Password" autocomplete="off">
             <button onclick="doLogin()">Login</button>
@@ -262,24 +266,24 @@
             let filteredZones = currentFilterZone ? locations.teaZones.filter(z => z.id === currentFilterZone) : locations.teaZones;
             filteredFactories.forEach(f => {
                 const marker = L.marker([f.lat, f.lng], { icon: L.divIcon({ html: '<div style="background:#e74c3c; width:12px; height:12px; border-radius:50%; border:2px solid white;"></div>', iconSize: [12,12] }) }).addTo(map);
-                marker.bindPopup(`<b>?? ${f.name}</b><br>Region: ${f.region}<br>Capacity: ${f.capacity.toLocaleString()} kg/day`);
+                marker.bindPopup(`<b>🏭 ${f.name}</b><br>Region: ${f.region}<br>Capacity: ${f.capacity.toLocaleString()} kg/day`);
                 markers.factories.push(marker);
             });
             filteredFarmers.forEach(f => {
                 const marker = L.marker([f.lat, f.lng], { icon: L.divIcon({ html: '<div style="background:#27ae60; width:12px; height:12px; border-radius:50%; border:2px solid white;"></div>', iconSize: [12,12] }) }).addTo(map);
-                marker.bindPopup(`<b>?? ${f.name}</b><br>ID: ${f.number}<br>${f.acres} acres`);
+                marker.bindPopup(`<b>👤 ${f.name}</b><br>ID: ${f.number}<br>${f.acres} acres`);
                 markers.farmers.push(marker);
             });
             filteredCenters.forEach(c => {
                 const marker = L.marker([c.lat, c.lng], { icon: L.divIcon({ html: '<div style="background:#f39c12; width:12px; height:12px; border-radius:50%; border:2px solid white;"></div>', iconSize: [12,12] }) }).addTo(map);
-                marker.bindPopup(`<b>?? ${c.name}</b><br>Factory: ${c.factory}<br>Weighbridge: ${c.has_weighbridge ? 'Yes' : 'No'}`);
+                marker.bindPopup(`<b>📍 ${c.name}</b><br>Factory: ${c.factory}<br>Weighbridge: ${c.has_weighbridge ? 'Yes' : 'No'}`);
                 markers.centers.push(marker);
             });
             filteredZones.forEach(z => {
                 const center = getZoneCenter(z.id);
                 if (center) {
                     const marker = L.marker([center.lat, center.lng], { icon: L.divIcon({ html: '<div style="background:#2c5e2e; width:12px; height:12px; border-radius:50%; border:2px solid white;"></div>', iconSize: [12,12] }) }).addTo(map);
-                    marker.bindPopup(`<b>?? ${z.name}</b><br>${z.acres.toLocaleString()} acres`);
+                    marker.bindPopup(`<b>🌿 ${z.name}</b><br>${z.acres.toLocaleString()} acres`);
                     markers.zones.push(marker);
                 }
             });
@@ -294,20 +298,21 @@
             let html = `<div class="panel-title">Filter by Tea Zone</div><div><button class="filter-btn ${!currentFilterZone ? 'filter-active' : ''}" onclick="filterMarkersByZone(null)">All Zones</button>`;
             zones.forEach(z => html += `<button class="filter-btn ${currentFilterZone === z.id ? 'filter-active' : ''}" onclick="filterMarkersByZone(${z.id})">${z.name}</button>`);
             html += `</div><div class="panel-title">Factories</div>`;
-            factories.forEach(f => html += `<div class="list-item" onclick="zoomToLocation(${f.lat}, ${f.lng})"><div class="item-name">?? ${f.name}</div><div class="item-detail">${f.region}</div></div>`);
+            factories.forEach(f => html += `<div class="list-item" onclick="zoomToLocation(${f.lat}, ${f.lng})"><div class="item-name">🏭 ${f.name}</div><div class="item-detail">${f.region}</div></div>`);
             html += `<div class="panel-title">Farmers</div>`;
-            farmers.forEach(f => html += `<div class="list-item" onclick="zoomToLocation(${f.lat}, ${f.lng})"><div class="item-name">?? ${f.name}</div><div class="item-detail">${f.number} | ${f.acres} acres</div></div>`);
+            farmers.forEach(f => html += `<div class="list-item" onclick="zoomToLocation(${f.lat}, ${f.lng})"><div class="item-name">👤 ${f.name}</div><div class="item-detail">${f.number} | ${f.acres} acres</div></div>`);
             html += `<div class="panel-title">Buying Centers</div>`;
-            centers.forEach(c => html += `<div class="list-item" onclick="zoomToLocation(${c.lat}, ${c.lng})"><div class="item-name">?? ${c.name}</div><div class="item-detail">Factory: ${c.factory}</div></div>`);
+            centers.forEach(c => html += `<div class="list-item" onclick="zoomToLocation(${c.lat}, ${c.lng})"><div class="item-name">📍 ${c.name}</div><div class="item-detail">Factory: ${c.factory}</div></div>`);
             sidePanel.innerHTML = html;
         }
         function zoomToLocation(lat, lng) { if (map) map.setView([lat, lng], 14); }
         function initMap() {
             if (map) return;
             map = L.map('map').setView([0.5, 36.5], 8);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '� OpenStreetMap' }).addTo(map);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '© OpenStreetMap' }).addTo(map);
             updateMapMarkers();
             renderSidePanels();
+            setTimeout(() => map.invalidateSize(), 200);
         }
 
         // Admin dashboard functions
@@ -482,8 +487,8 @@
                 saveLoginState(currentRole, null, 'farmers');
                 document.getElementById('loginOverlay').style.display = 'none';
                 document.getElementById('appContainer').style.display = 'flex';
-                const roleHtml = currentRole === 'admin' ?
-                    '<i class="fas fa-user-shield"></i> Admin <div class="three-dot-menu" onclick="toggleMenu(event)"><i class="fas fa-ellipsis-v"></i><div id="threeDotContent" class="three-dot-content"><a onclick="switchAdminSubView(\'farmers\')">????? Farmers</a><a onclick="switchAdminSubView(\'fertilizer\')">?? Fertilizer Assets</a><a onclick="switchAdminSubView(\'carbon\')">?? Carbon & SOC</a><a onclick="switchAdminSubView(\'reports\')">?? Reports</a></div></div>' :
+                const roleHtml = currentRole === 'admin' ? 
+                    '<i class="fas fa-user-shield"></i> Admin <div class="three-dot-menu" onclick="toggleMenu(event)"><i class="fas fa-ellipsis-v"></i><div id="threeDotContent" class="three-dot-content"><a onclick="switchAdminSubView(\'farmers\')">👨‍🌾 Farmers</a><a onclick="switchAdminSubView(\'fertilizer\')">💊 Fertilizer Assets</a><a onclick="switchAdminSubView(\'carbon\')">🌿 Carbon & SOC</a><a onclick="switchAdminSubView(\'reports\')">📄 Reports</a></div></div>' : 
                     '<i class="fas fa-clipboard-list"></i> Field Clerk';
                 document.getElementById('userRoleBadge').innerHTML = roleHtml;
                 buildUI();
@@ -497,11 +502,11 @@
             tabsContainer.innerHTML = '';
             pageContainer.innerHTML = '';
             let tabs = currentRole === 'admin' ? [
-                { id: 'map', label: '??? Map', icon: 'map' },
-                { id: 'dashboard', label: '?? Dashboard', icon: 'chart-line' }
+                { id: 'map', label: '🗺️ Map', icon: 'map' },
+                { id: 'dashboard', label: '📊 Dashboard', icon: 'chart-line' }
             ] : [
-                { id: 'map', label: '??? Map', icon: 'map' },
-                { id: 'records', label: '?? Records', icon: 'clipboard-list' }
+                { id: 'map', label: '🗺️ Map', icon: 'map' },
+                { id: 'records', label: '📋 Records', icon: 'clipboard-list' }
             ];
             tabs.forEach(tab => {
                 const btn = document.createElement('div');
@@ -520,10 +525,10 @@
                 document.getElementById('page-records').innerHTML = `
                     <div class="flex-content">
                         <div class="records-grid">
-                            <div class="record-card" onclick="openModal('delivery')"><div class="record-icon">??</div><div>Record Delivery</div></div>
-                            <div class="record-card" onclick="openModal('soil')"><div class="record-icon">??</div><div>Soil Sample</div></div>
-                            <div class="record-card" onclick="openModal('fertilizer')"><div class="record-icon">??</div><div>Fertilizer Distribution</div></div>
-                            <div class="record-card" onclick="openModal('carbon')"><div class="record-icon">??</div><div>Carbon Project</div></div>
+                            <div class="record-card" onclick="openModal('delivery')"><div class="record-icon">🚚</div><div>Record Delivery</div></div>
+                            <div class="record-card" onclick="openModal('soil')"><div class="record-icon">🌱</div><div>Soil Sample</div></div>
+                            <div class="record-card" onclick="openModal('fertilizer')"><div class="record-icon">💊</div><div>Fertilizer Distribution</div></div>
+                            <div class="record-card" onclick="openModal('carbon')"><div class="record-icon">🌿</div><div>Carbon Project</div></div>
                         </div>
                     </div>`;
             } else {
@@ -576,8 +581,8 @@
             adminSubView = savedState.adminView || 'farmers';
             document.getElementById('loginOverlay').style.display = 'none';
             document.getElementById('appContainer').style.display = 'flex';
-            const roleHtml = currentRole === 'admin' ?
-                '<i class="fas fa-user-shield"></i> Admin <div class="three-dot-menu" onclick="toggleMenu(event)"><i class="fas fa-ellipsis-v"></i><div id="threeDotContent" class="three-dot-content"><a onclick="switchAdminSubView(\'farmers\')">????? Farmers</a><a onclick="switchAdminSubView(\'fertilizer\')">?? Fertilizer Assets</a><a onclick="switchAdminSubView(\'carbon\')">?? Carbon & SOC</a><a onclick="switchAdminSubView(\'reports\')">?? Reports</a></div></div>' :
+            const roleHtml = currentRole === 'admin' ? 
+                '<i class="fas fa-user-shield"></i> Admin <div class="three-dot-menu" onclick="toggleMenu(event)"><i class="fas fa-ellipsis-v"></i><div id="threeDotContent" class="three-dot-content"><a onclick="switchAdminSubView(\'farmers\')">👨‍🌾 Farmers</a><a onclick="switchAdminSubView(\'fertilizer\')">💊 Fertilizer Assets</a><a onclick="switchAdminSubView(\'carbon\')">🌿 Carbon & SOC</a><a onclick="switchAdminSubView(\'reports\')">📄 Reports</a></div></div>' : 
                 '<i class="fas fa-clipboard-list"></i> Field Clerk';
             document.getElementById('userRoleBadge').innerHTML = roleHtml;
             buildUI();
@@ -603,30 +608,5 @@
         document.addEventListener('click', closeMenuOnClickOutside);
         document.getElementById('password').addEventListener('keypress', function(e) { if (e.key === 'Enter') doLogin(); });
     </script>
-<script>
-// Ensure map height is always correct when the viewport changes
-function fixMapHeight() {
-    const mapContainer = document.querySelector('.map-container, #map');
-    if (mapContainer) {
-        const tabHeight = 50; // approximate tab height
-        const safeArea = window.innerHeight - window.visualViewport.height || 0;
-        const newHeight = window.visualViewport.height - 110 - safeArea;
-        mapContainer.style.height = newHeight + 'px';
-        mapContainer.style.maxHeight = newHeight + 'px';
-        // Also resize the map if Leaflet is available
-        if (window.map && typeof map.invalidateSize === 'function') {
-            setTimeout(() => map.invalidateSize(), 100);
-        }
-    }
-}
-if (window.visualViewport) {
-    window.visualViewport.addEventListener('resize', fixMapHeight);
-    window.addEventListener('load', fixMapHeight);
-}
-</script>
-
+</body>
 </html>
-
-
-
-
