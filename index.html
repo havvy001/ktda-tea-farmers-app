@@ -1,15 +1,15 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-    <title>KTDA GIS � Carbon, Soil & Fertilizer Management</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>KTDA GIS – Carbon, Soil & Fertilizer Management</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f4f0; height: 100dvh; overflow: hidden; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f4f0; height: 100dvh; overflow: hidden; touch-action: pan-x pan-y; }
         
         /* --- LOGIN --- */
         .login-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: env(safe-area-inset-bottom, 0px); background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 2000; }
@@ -25,7 +25,7 @@
         /* Header with Menu Toggle */
         .header { background: #2c5e2e; color: white; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; z-index: 100; }
         .header-left { display: flex; align-items: center; gap: 12px; }
-        .menu-btn { background: none; border: none; color: white; font-size: 20px; cursor: pointer; padding: 5px; display: flex; align-items: center; }
+        .menu-btn { background: none; border: none; color: white; font-size: 24px; cursor: pointer; padding: 5px; display: flex; align-items: center; }
         .header h1 { font-size: 18px; display: flex; align-items: center; gap: 8px; }
         
         /* --- TABS (Collapsible) --- */
@@ -41,7 +41,7 @@
         .tab.active { background: #2c5e2e; color: white; }
         .tab-icon { font-size: 18px; }
         
-        /* Toggle Button for Tabs (Pure CSS Triangle) */
+        /* Toggle Button for Tabs */
         .tabs-toggle {
             position: absolute; top: -24px; left: 50%; transform: translateX(-50%);
             background: white; border: 1px solid #ddd; border-bottom: none;
@@ -65,7 +65,7 @@
         button { background: #2c5e2e; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; margin: 5px; }
         .print-btn { background: #2196f3; }
 
-        /* --- MAP LAYOUT & SIDE PANEL (Collapsible via Header) --- */
+        /* --- MAP LAYOUT & SIDE PANEL --- */
         .map-layout { display: flex; height: 100%; width: 100%; position: relative; z-index: 1; overflow: hidden; }
         
         .side-panel { 
@@ -90,6 +90,9 @@
         .map-wrapper { flex: 1; position: relative; z-index: 1; min-height: 0; }
         .map-container { height: 100%; width: 100%; position: relative; z-index: 0; }
         #map { height: 100%; width: 100%; }
+        
+        /* Fix for Leaflet controls to not be hidden by header */
+        .leaflet-top { top: 10px; }
         
         .legend { position: absolute; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); right: 10px; background: rgba(255,255,255,0.95); padding: 8px 12px; border-radius: 8px; font-size: 11px; z-index: 100; }
         .legend-color { width: 12px; height: 12px; display: inline-block; margin-right: 5px; border-radius: 2px; }
@@ -121,7 +124,7 @@
 <body>
     <div id="loginOverlay" class="login-overlay">
         <div class="login-card">
-            <h2>?? KTDA GIS</h2>
+            <h2>&#127757; KTDA GIS</h2>
             <input type="text" id="username" placeholder="Username" autocomplete="off">
             <input type="password" id="password" placeholder="Password" autocomplete="off">
             <button onclick="doLogin()">Login</button>
@@ -133,15 +136,12 @@
     <div id="appContainer" class="app-container">
         <div class="header">
             <div class="header-left">
-                <!-- Menu Toggle Button -->
-                <button class="menu-btn" id="menuToggleBtn" onclick="toggleSidePanel()">
-                    <span style="font-size: 24px;">&#9776;</span>
-                </button>
-                <h1>?? KTDA GIS</h1>
+                <button class="menu-btn" id="menuToggleBtn" onclick="toggleSidePanel()">&#9776;</button>
+                <h1>&#127811; KTDA GIS</h1>
             </div>
             <div>
                 <span id="userRoleBadge"></span> 
-                <button onclick="logout()" style="background:none; border:none; color:white; margin-left:10px; padding:0; font-size:16px;">??</button>
+                <button onclick="logout()" style="background:none; border:none; color:white; margin-left:10px; padding:0; font-size:16px;">&#128682;</button>
             </div>
         </div>
         <div class="tabs" id="tabsContainer"></div>
@@ -159,6 +159,21 @@
     </div>
 
     <script>
+        // Using HTML Entities for icons to prevent encoding corruption
+        const icons = {
+            map: '&#128506;', // 🗺️
+            chart: '&#128202;', // 📊
+            clipboard: '&#128203;', // 📋
+            shield: '&#128737;', // 🛡️
+            truck: '&#128666;', // 🚚
+            leaf: '&#127807;', // 🌿
+            pill: '&#128138;', // 💊
+            file: '&#128196;', // 📄
+            factory: '&#127981;', // 🏭
+            farmer: '&#128100;', // 👤
+            pin: '&#128205;' // 📍
+        };
+
         const locations = {
             factories: [
                 { id: 1, name: "Rukuriri Tea Factory", region: "Meru", lat: 0.2345, lng: 37.5678, capacity: 120000, zoneId: 1 },
@@ -255,24 +270,24 @@
             
             filteredFactories.forEach(f => {
                 const marker = L.marker([f.lat, f.lng], { icon: L.divIcon({ html: '<div style="background:#e74c3c; width:12px; height:12px; border-radius:50%; border:2px solid white;"></div>', iconSize: [12,12] }) }).addTo(map);
-                marker.bindPopup(`<b>?? ${f.name}</b><br>Region: ${f.region}<br>Capacity: ${f.capacity.toLocaleString()} kg/day`);
+                marker.bindPopup(`<b>Factory: ${f.name}</b><br>Region: ${f.region}<br>Capacity: ${f.capacity.toLocaleString()} kg/day`);
                 markers.factories.push(marker);
             });
             filteredFarmers.forEach(f => {
                 const marker = L.marker([f.lat, f.lng], { icon: L.divIcon({ html: '<div style="background:#27ae60; width:12px; height:12px; border-radius:50%; border:2px solid white;"></div>', iconSize: [12,12] }) }).addTo(map);
-                marker.bindPopup(`<b>?? ${f.name}</b><br>ID: ${f.number}<br>${f.acres} acres`);
+                marker.bindPopup(`<b>Farmer: ${f.name}</b><br>ID: ${f.number}<br>${f.acres} acres`);
                 markers.farmers.push(marker);
             });
             filteredCenters.forEach(c => {
                 const marker = L.marker([c.lat, c.lng], { icon: L.divIcon({ html: '<div style="background:#f39c12; width:12px; height:12px; border-radius:50%; border:2px solid white;"></div>', iconSize: [12,12] }) }).addTo(map);
-                marker.bindPopup(`<b>?? ${c.name}</b><br>Factory: ${c.factory}<br>Weighbridge: ${c.has_weighbridge ? 'Yes' : 'No'}`);
+                marker.bindPopup(`<b>Center: ${c.name}</b><br>Factory: ${c.factory}<br>Weighbridge: ${c.has_weighbridge ? 'Yes' : 'No'}`);
                 markers.centers.push(marker);
             });
             filteredZones.forEach(z => {
                 const center = getZoneCenter(z.id);
                 if (center) {
                     const marker = L.marker([center.lat, center.lng], { icon: L.divIcon({ html: '<div style="background:#2c5e2e; width:12px; height:12px; border-radius:50%; border:2px solid white;"></div>', iconSize: [12,12] }) }).addTo(map);
-                    marker.bindPopup(`<b>?? ${z.name}</b><br>${z.acres.toLocaleString()} acres`);
+                    marker.bindPopup(`<b>Zone: ${z.name}</b><br>${z.acres.toLocaleString()} acres`);
                     markers.zones.push(marker);
                 }
             });
@@ -291,13 +306,13 @@
             zones.forEach(z => html += `<button class="filter-btn ${currentFilterZone === z.id ? 'filter-active' : ''}" onclick="filterMarkersByZone(${z.id})">${z.name}</button>`);
             
             html += `</div><div class="panel-title">Factories</div>`;
-            factories.forEach(f => html += `<div class="list-item" onclick="zoomToLocation(${f.lat}, ${f.lng})">?? <div><div class="item-name">${f.name}</div><div class="item-detail">${f.region}</div></div></div>`);
+            factories.forEach(f => html += `<div class="list-item" onclick="zoomToLocation(${f.lat}, ${f.lng})">${icons.factory} <div><div class="item-name">${f.name}</div><div class="item-detail">${f.region}</div></div></div>`);
             
             html += `<div class="panel-title">Farmers</div>`;
-            farmers.forEach(f => html += `<div class="list-item" onclick="zoomToLocation(${f.lat}, ${f.lng})">?? <div><div class="item-name">${f.name}</div><div class="item-detail">${f.number} | ${f.acres} acres</div></div></div>`);
+            farmers.forEach(f => html += `<div class="list-item" onclick="zoomToLocation(${f.lat}, ${f.lng})">${icons.farmer} <div><div class="item-name">${f.name}</div><div class="item-detail">${f.number} | ${f.acres} acres</div></div></div>`);
             
             html += `<div class="panel-title">Buying Centers</div>`;
-            centers.forEach(c => html += `<div class="list-item" onclick="zoomToLocation(${c.lat}, ${c.lng})">?? <div><div class="item-name">${c.name}</div><div class="item-detail">Factory: ${c.factory}</div></div></div>`);
+            centers.forEach(c => html += `<div class="list-item" onclick="zoomToLocation(${c.lat}, ${c.lng})">${icons.pin} <div><div class="item-name">${c.name}</div><div class="item-detail">Factory: ${c.factory}</div></div></div>`);
             
             sidePanel.innerHTML = html;
             
@@ -314,7 +329,6 @@
             } else {
                 sidePanel.classList.remove('collapsed');
             }
-            // Allow map to resize properly after animation
             setTimeout(() => { if (map) map.invalidateSize(); }, 300);
         }
         
@@ -322,8 +336,38 @@
         
         function initMap() {
             if (map) return;
-            map = L.map('map').setView([0.5, 36.5], 8);
-            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri' }).addTo(map);
+            // Prevent mobile reloading on zoom
+            L.TileLayer.prototype.options.referrerPolicy = 'strict-origin-when-cross-origin';
+            
+            map = L.map('map', { 
+                zoomControl: false, // Disable default zoom control to place it top-left
+                tap: false // Prevents mobile app from refreshing page on tap
+            }).setView([0.5, 36.5], 8);
+
+            // Add Zoom Control to Top-Left explicitly
+            L.control.zoom({ position: 'topleft' }).addTo(map);
+            
+            // Basemaps
+            const streetMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 19
+            });
+            
+            const satelliteMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { 
+                attribution: 'Tiles &copy; Esri',
+                maxZoom: 19
+            });
+
+            // Add default map
+            streetMap.addTo(map);
+
+            // Add Layer Control (Basemap switch)
+            const baseMaps = {
+                "Street Map": streetMap,
+                "Satellite": satelliteMap
+            };
+            L.control.layers(baseMaps, null, { position: 'topleft' }).addTo(map);
+
             updateMapMarkers();
             renderSidePanels();
             setTimeout(() => map.invalidateSize(), 200);
@@ -472,17 +516,17 @@
                 document.getElementById('appContainer').style.display = 'flex';
                 
                 const roleHtml = currentRole === 'admin' ?
-                    `<span style="display:flex;align-items:center;gap:5px;">??? Admin</span>
+                    `<span style="display:flex;align-items:center;gap:5px;">${icons.shield} Admin</span>
                      <div class="three-dot-menu" onclick="toggleMenu(event)">
-                        <span>?</span>
+                        <span>&#8942;</span>
                         <div id="threeDotContent" class="three-dot-content">
-                            <a onclick="switchAdminSubView('farmers')">?? Farmers</a>
-                            <a onclick="switchAdminSubView('fertilizer')">?? Fertilizer Assets</a>
-                            <a onclick="switchAdminSubView('carbon')">?? Carbon & SOC</a>
-                            <a onclick="switchAdminSubView('reports')">?? Reports</a>
+                            <a onclick="switchAdminSubView('farmers')">${icons.file} Farmers</a>
+                            <a onclick="switchAdminSubView('fertilizer')">${icons.pill} Fertilizer Assets</a>
+                            <a onclick="switchAdminSubView('carbon')">${icons.leaf} Carbon & SOC</a>
+                            <a onclick="switchAdminSubView('reports')">${icons.clipboard} Reports</a>
                         </div>
                      </div>` :
-                    `<span style="display:flex;align-items:center;gap:5px;">?? Field Clerk</span>`;
+                    `<span style="display:flex;align-items:center;gap:5px;">${icons.clipboard} Field Clerk</span>`;
                 
                 document.getElementById('userRoleBadge').innerHTML = roleHtml;
                 buildUI();
@@ -510,7 +554,6 @@
             tabsContainer.innerHTML = '';
             pageContainer.innerHTML = '';
             
-            // Add Tabs Toggle Button
             const toggleBtn = document.createElement('div');
             toggleBtn.className = 'tabs-toggle';
             toggleBtn.onclick = toggleTabs;
@@ -518,11 +561,11 @@
             tabsContainer.appendChild(toggleBtn);
             
             let tabs = currentRole === 'admin' ? [
-                { id: 'map', label: 'Map', icon: '???' },
-                { id: 'dashboard', label: 'Dashboard', icon: '??' }
+                { id: 'map', label: 'Map', icon: icons.map },
+                { id: 'dashboard', label: 'Dashboard', icon: icons.chart }
             ] : [
-                { id: 'map', label: 'Map', icon: '???' },
-                { id: 'records', label: 'Records', icon: '??' }
+                { id: 'map', label: 'Map', icon: icons.map },
+                { id: 'records', label: 'Records', icon: icons.clipboard }
             ];
             
             tabs.forEach(tab => {
@@ -545,10 +588,10 @@
                 document.getElementById('page-records').innerHTML = `
                     <div class="flex-content">
                         <div class="records-grid">
-                            <div class="record-card" onclick="openModal('delivery')"><div class="record-icon">??</div><div>Record Delivery</div></div>
-                            <div class="record-card" onclick="openModal('soil')"><div class="record-icon">??</div><div>Soil Sample</div></div>
-                            <div class="record-card" onclick="openModal('fertilizer')"><div class="record-icon">??</div><div>Fertilizer Distribution</div></div>
-                            <div class="record-card" onclick="openModal('carbon')"><div class="record-icon">??</div><div>Carbon Project</div></div>
+                            <div class="record-card" onclick="openModal('delivery')"><div class="record-icon">${icons.truck}</div><div>Record Delivery</div></div>
+                            <div class="record-card" onclick="openModal('soil')"><div class="record-icon">${icons.leaf}</div><div>Soil Sample</div></div>
+                            <div class="record-card" onclick="openModal('fertilizer')"><div class="record-icon">${icons.pill}</div><div>Fertilizer Distribution</div></div>
+                            <div class="record-card" onclick="openModal('carbon')"><div class="record-icon">${icons.leaf}</div><div>Carbon Project</div></div>
                         </div>
                     </div>`;
             } else {
@@ -605,17 +648,17 @@
             document.getElementById('appContainer').style.display = 'flex';
             
             const roleHtml = currentRole === 'admin' ?
-                `<span style="display:flex;align-items:center;gap:5px;">??? Admin</span>
+                `<span style="display:flex;align-items:center;gap:5px;">${icons.shield} Admin</span>
                  <div class="three-dot-menu" onclick="toggleMenu(event)">
-                    <span>?</span>
+                    <span>&#8942;</span>
                     <div id="threeDotContent" class="three-dot-content">
-                        <a onclick="switchAdminSubView('farmers')">?? Farmers</a>
-                        <a onclick="switchAdminSubView('fertilizer')">?? Fertilizer Assets</a>
-                        <a onclick="switchAdminSubView('carbon')">?? Carbon & SOC</a>
-                        <a onclick="switchAdminSubView('reports')">?? Reports</a>
+                        <a onclick="switchAdminSubView('farmers')">${icons.file} Farmers</a>
+                        <a onclick="switchAdminSubView('fertilizer')">${icons.pill} Fertilizer Assets</a>
+                        <a onclick="switchAdminSubView('carbon')">${icons.leaf} Carbon & SOC</a>
+                        <a onclick="switchAdminSubView('reports')">${icons.clipboard} Reports</a>
                     </div>
                  </div>` :
-                `<span style="display:flex;align-items:center;gap:5px;">?? Field Clerk</span>`;
+                `<span style="display:flex;align-items:center;gap:5px;">${icons.clipboard} Field Clerk</span>`;
                 
             document.getElementById('userRoleBadge').innerHTML = roleHtml;
             buildUI();
@@ -644,4 +687,3 @@
     </script>
 </body>
 </html>
-
