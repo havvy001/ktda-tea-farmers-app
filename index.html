@@ -21,7 +21,11 @@
 
         /* --- APP LAYOUT --- */
         .app-container { display: none; height: 100dvh; flex-direction: column; overflow: hidden; }
-        .header { background: #2c5e2e; color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; z-index: 100; }
+        
+        /* Header with Menu Toggle */
+        .header { background: #2c5e2e; color: white; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; z-index: 100; }
+        .header-left { display: flex; align-items: center; gap: 12px; }
+        .menu-btn { background: none; border: none; color: white; font-size: 20px; cursor: pointer; padding: 5px; display: flex; align-items: center; }
         .header h1 { font-size: 18px; display: flex; align-items: center; gap: 8px; }
         
         /* --- TABS (Collapsible) --- */
@@ -61,7 +65,7 @@
         button { background: #2c5e2e; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; margin: 5px; }
         .print-btn { background: #2196f3; }
 
-        /* --- MAP LAYOUT & SIDE PANEL (Collapsible) --- */
+        /* --- MAP LAYOUT & SIDE PANEL (Collapsible via Header) --- */
         .map-layout { display: flex; height: 100%; width: 100%; position: relative; z-index: 1; overflow: hidden; }
         
         .side-panel { 
@@ -76,17 +80,6 @@
             transition: margin-left 0.3s ease;
         }
         .side-panel.collapsed { margin-left: -280px; }
-        
-        /* Toggle Button for Side Panel (Pure CSS Triangle) */
-        .panel-toggle {
-            position: absolute; right: -24px; top: 20px;
-            background: white; border: 1px solid #ddd; border-left: none;
-            border-radius: 0 8px 8px 0; width: 24px; height: 40px; cursor: pointer;
-            display: flex; justify-content: center; align-items: center; z-index: 6;
-            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
-        }
-        .arrow-left { width: 0; height: 0; border-top: 6px solid transparent; border-bottom: 6px solid transparent; border-right: 8px solid #2c5e2e; }
-        .arrow-right { width: 0; height: 0; border-top: 6px solid transparent; border-bottom: 6px solid transparent; border-left: 8px solid #2c5e2e; }
 
         .panel-title { font-size: 16px; font-weight: bold; color: #2c5e2e; margin: 10px 0; border-bottom: 2px solid #2c5e2e; }
         .filter-btn { background: #2c5e2e; color: white; border: none; padding: 5px 10px; border-radius: 20px; margin: 5px; cursor: pointer; font-size: 12px; }
@@ -139,7 +132,13 @@
 
     <div id="appContainer" class="app-container">
         <div class="header">
-            <h1>🍃 KTDA GIS</h1>
+            <div class="header-left">
+                <!-- Menu Toggle Button -->
+                <button class="menu-btn" id="menuToggleBtn" onclick="toggleSidePanel()">
+                    <span style="font-size: 24px;">&#9776;</span>
+                </button>
+                <h1>🍃 KTDA GIS</h1>
+            </div>
             <div>
                 <span id="userRoleBadge"></span> 
                 <button onclick="logout()" style="background:none; border:none; color:white; margin-left:10px; padding:0; font-size:16px;">🚪</button>
@@ -283,17 +282,12 @@
             const sidePanel = document.querySelector('.side-panel');
             if (!sidePanel) return;
             
-            if (!sidePanel.querySelector('.panel-toggle')) {
-                sidePanel.innerHTML = `<div class="panel-toggle" onclick="toggleSidePanel(event)"><div class="arrow-left" id="panelArrow"></div></div>` + sidePanel.innerHTML;
-            }
-
             const zones = locations.teaZones;
             const factories = currentFilterZone ? locations.factories.filter(f => f.zoneId === currentFilterZone) : locations.factories;
             const farmers = currentFilterZone ? locations.farmers.filter(f => f.zoneId === currentFilterZone) : locations.farmers;
             const centers = currentFilterZone ? locations.centers.filter(c => c.zoneId === currentFilterZone) : locations.centers;
             
-            let html = sidePanel.querySelector('.panel-toggle').outerHTML;
-            html += `<div class="panel-title">Filter by Tea Zone</div><div><button class="filter-btn ${!currentFilterZone ? 'filter-active' : ''}" onclick="filterMarkersByZone(null)">All Zones</button>`;
+            let html = `<div class="panel-title">Filter by Tea Zone</div><div><button class="filter-btn ${!currentFilterZone ? 'filter-active' : ''}" onclick="filterMarkersByZone(null)">All Zones</button>`;
             zones.forEach(z => html += `<button class="filter-btn ${currentFilterZone === z.id ? 'filter-active' : ''}" onclick="filterMarkersByZone(${z.id})">${z.name}</button>`);
             
             html += `</div><div class="panel-title">Factories</div>`;
@@ -307,25 +301,20 @@
             
             sidePanel.innerHTML = html;
             
-            if (isPanelCollapsed) {
-                sidePanel.classList.add('collapsed');
-                document.getElementById('panelArrow').className = 'arrow-right';
-            }
+            if (isPanelCollapsed) sidePanel.classList.add('collapsed');
         }
         
-        function toggleSidePanel(e) {
-            e.stopPropagation();
+        function toggleSidePanel() {
             const sidePanel = document.querySelector('.side-panel');
-            const arrow = document.getElementById('panelArrow');
+            if (!sidePanel) return;
             isPanelCollapsed = !isPanelCollapsed;
             
             if (isPanelCollapsed) {
                 sidePanel.classList.add('collapsed');
-                arrow.className = 'arrow-right';
             } else {
                 sidePanel.classList.remove('collapsed');
-                arrow.className = 'arrow-left';
             }
+            // Allow map to resize properly after animation
             setTimeout(() => { if (map) map.invalidateSize(); }, 300);
         }
         
@@ -521,7 +510,7 @@
             tabsContainer.innerHTML = '';
             pageContainer.innerHTML = '';
             
-            // Add Tabs Toggle Button (Using CSS Shapes)
+            // Add Tabs Toggle Button
             const toggleBtn = document.createElement('div');
             toggleBtn.className = 'tabs-toggle';
             toggleBtn.onclick = toggleTabs;
