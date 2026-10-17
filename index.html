@@ -11,54 +11,87 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f4f0; height: 100dvh; overflow: hidden; }
         
-        .login-overlay {
-            position: fixed; top: 0; left: 0; right: 0; bottom: env(safe-area-inset-bottom, 0px);
-            background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 2000;
-        }
+        /* --- LOGIN --- */
+        .login-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: env(safe-area-inset-bottom, 0px); background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 2000; }
         .login-card { background: white; padding: 30px; border-radius: 16px; width: 90%; max-width: 350px; text-align: center; }
         .login-card h2 { color: #2c5e2e; margin-bottom: 20px; }
         .login-card input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }
         .login-card button { width: 100%; padding: 12px; background: #2c5e2e; color: white; border: none; border-radius: 8px; font-size: 16px; margin-top: 10px; cursor: pointer; }
         .error-msg { color: red; font-size: 14px; margin-top: 10px; }
-        
+
+        /* --- APP LAYOUT --- */
         .app-container { display: none; height: 100dvh; flex-direction: column; overflow: hidden; }
-        .header { background: #2c5e2e; color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+        .header { background: #2c5e2e; color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; z-index: 100; }
         .header h1 { font-size: 18px; display: flex; align-items: center; gap: 8px; }
         
-        /* TABS – ALWAYS ON TOP */
+        /* --- TABS (Collapsible) --- */
         .tabs {
             display: flex; background: white; position: fixed !important; 
             bottom: env(safe-area-inset-bottom, 0px) !important; 
             left: 0 !important; right: 0 !important; z-index: 99999 !important;
             box-shadow: 0 -2px 10px rgba(0,0,0,0.1); flex-shrink: 0;
+            transition: transform 0.3s ease;
         }
-        .tab { flex: 1; text-align: center; padding: 10px; cursor: pointer; font-size: 14px; display: flex; flex-direction: column; align-items: center; gap: 4px; color: #333; }
+        .tabs.collapsed { transform: translateY(calc(100% - 40px)); }
+        .tab { flex: 1; text-align: center; padding: 10px; cursor: pointer; font-size: 12px; display: flex; flex-direction: column; align-items: center; gap: 4px; color: #333; }
         .tab.active { background: #2c5e2e; color: white; }
+        .tab-icon { font-size: 18px; }
         
+        /* Toggle Button for Tabs */
+        .tabs-toggle {
+            position: absolute; top: -24px; left: 50%; transform: translateX(-50%);
+            background: white; border: 1px solid #ddd; border-bottom: none;
+            border-radius: 8px 8px 0 0; padding: 2px 15px; cursor: pointer;
+            font-size: 14px; color: #2c5e2e; z-index: 10000;
+        }
+
+        /* --- PAGES --- */
         .page { display: none; height: calc(100dvh - 110px - env(safe-area-inset-bottom, 0px)); overflow-y: auto; margin-top: 60px; margin-bottom: 50px; }
         .page.active { display: flex; flex-direction: column; }
         .flex-content { width: 100%; padding: 20px; }
         .card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        
         .stat-row { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 15px; margin-bottom: 20px; }
         .stat-card { flex: 1; min-width: 150px; background: white; border-radius: 12px; padding: 15px; text-align: center; }
         .stat-number { font-size: 28px; font-weight: bold; color: #2c5e2e; }
-        
         .data-table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; margin-top: 10px; }
         .data-table th, .data-table td { padding: 10px; text-align: left; border-bottom: 1px solid #e0e0e0; }
         .data-table th { background: #2c5e2e; color: white; }
-        
         button { background: #2c5e2e; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; margin: 5px; }
         .print-btn { background: #2196f3; }
+
+        /* --- MAP LAYOUT & SIDE PANEL (Collapsible) --- */
+        .map-layout { display: flex; height: 100%; width: 100%; position: relative; z-index: 1; overflow: hidden; }
         
-        /* MAP LAYOUT */
-        .map-layout { display: flex; height: 100%; width: 100%; position: relative; z-index: 1; }
-        .side-panel { width: 280px; background: white; border-right: 1px solid #ddd; overflow-y: auto; padding: 10px; position: relative; z-index: 5 !important; flex-shrink: 0; }
+        .side-panel { 
+            width: 280px; 
+            background: white; 
+            border-right: 1px solid #ddd; 
+            overflow-y: auto; 
+            padding: 10px; 
+            position: relative; 
+            z-index: 5 !important; 
+            flex-shrink: 0;
+            transition: margin-left 0.3s ease;
+        }
+        .side-panel.collapsed { margin-left: -280px; }
+        
+        /* Toggle Button for Side Panel */
+        .panel-toggle {
+            position: absolute; right: -28px; top: 20px;
+            background: white; border: 1px solid #ddd; border-left: none;
+            border-radius: 0 8px 8px 0; padding: 8px 4px; cursor: pointer;
+            font-size: 14px; color: #2c5e2e; z-index: 6;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+            transition: right 0.3s ease;
+        }
+        .side-panel.collapsed .panel-toggle { right: -28px; }
+
         .panel-title { font-size: 16px; font-weight: bold; color: #2c5e2e; margin: 10px 0; border-bottom: 2px solid #2c5e2e; }
         .filter-btn { background: #2c5e2e; color: white; border: none; padding: 5px 10px; border-radius: 20px; margin: 5px; cursor: pointer; font-size: 12px; }
         .filter-active { background: #1e3a1f; }
-        .list-item { padding: 8px; margin-bottom: 6px; background: #f9f9f9; border-radius: 6px; cursor: pointer; border-left: 3px solid #2c5e2e; display: flex; align-items: center; gap: 8px; font-size: 14px;}
+        .list-item { padding: 8px; margin-bottom: 6px; background: #f9f9f9; border-radius: 6px; cursor: pointer; border-left: 3px solid #2c5e2e; display: flex; align-items: center; gap: 8px; font-size: 14px; }
         .list-item:hover { background: #e8f5e9; transform: translateX(3px); }
+        
         .map-wrapper { flex: 1; position: relative; z-index: 1; min-height: 0; }
         .map-container { height: 100%; width: 100%; position: relative; z-index: 0; }
         #map { height: 100%; width: 100%; }
@@ -83,7 +116,11 @@
         .close-modal { font-size: 24px; cursor: pointer; }
         input, select, textarea { width: 100%; padding: 8px; margin: 8px 0; border: 1px solid #ddd; border-radius: 6px; }
         
-        @media (max-width: 768px) { .side-panel { width: 240px; } .stat-card { min-width: 120px; } }
+        @media (max-width: 768px) { 
+            .side-panel { width: 240px; } 
+            .side-panel.collapsed { margin-left: -240px; }
+            .stat-card { min-width: 120px; } 
+        }
     </style>
 </head>
 <body>
@@ -121,6 +158,7 @@
     </div>
 
     <script>
+        // Data definitions
         const locations = {
             factories: [
                 { id: 1, name: "Rukuriri Tea Factory", region: "Meru", lat: 0.2345, lng: 37.5678, capacity: 120000, zoneId: 1 },
@@ -157,6 +195,7 @@
             { id: 2, name: "Mungania Tree ARR", methodology: "VM0047", areaHa: 1200, estCredits: 4800, status: "Pending", issued: 0 }
         ];
 
+        // App State
         const USERS = { admin: { password: 'admin123', role: 'admin' }, clerk1: { password: 'clerk123', role: 'clerk' } };
         let currentRole = null;
         let map = null;
@@ -166,12 +205,16 @@
         let pieChart = null;
         let barChart = null;
         let isLoggedIn = false;
+        let isPanelCollapsed = false;
+        let isTabsCollapsed = false;
 
+        // Storage keys
         const STORAGE_KEY = 'ktda_auth';
         const STORAGE_ROLE = 'ktda_role';
         const STORAGE_FILTER = 'ktda_filter_zone';
         const STORAGE_ADMIN_VIEW = 'ktda_admin_view';
 
+        // Storage functions
         function saveLoginState(role, filterZone, adminView) {
             localStorage.setItem(STORAGE_KEY, 'true');
             localStorage.setItem(STORAGE_ROLE, role);
@@ -190,6 +233,7 @@
             return { logged: false };
         }
 
+        // Map logic
         function getZoneCenter(zoneId) {
             const zone = locations.teaZones.find(z => z.id === zoneId);
             return zone ? { lat: zone.lat, lng: zone.lng } : null;
@@ -241,12 +285,19 @@
         function renderSidePanels() {
             const sidePanel = document.querySelector('.side-panel');
             if (!sidePanel) return;
+            
+            // Add toggle button if not exists
+            if (!sidePanel.querySelector('.panel-toggle')) {
+                sidePanel.innerHTML = `<div class="panel-toggle" onclick="toggleSidePanel(event)">◀</div>` + sidePanel.innerHTML;
+            }
+
             const zones = locations.teaZones;
             const factories = currentFilterZone ? locations.factories.filter(f => f.zoneId === currentFilterZone) : locations.factories;
             const farmers = currentFilterZone ? locations.farmers.filter(f => f.zoneId === currentFilterZone) : locations.farmers;
             const centers = currentFilterZone ? locations.centers.filter(c => c.zoneId === currentFilterZone) : locations.centers;
             
-            let html = `<div class="panel-title">Filter by Tea Zone</div><div><button class="filter-btn ${!currentFilterZone ? 'filter-active' : ''}" onclick="filterMarkersByZone(null)">All Zones</button>`;
+            let html = sidePanel.querySelector('.panel-toggle').outerHTML;
+            html += `<div class="panel-title">Filter by Tea Zone</div><div><button class="filter-btn ${!currentFilterZone ? 'filter-active' : ''}" onclick="filterMarkersByZone(null)">All Zones</button>`;
             zones.forEach(z => html += `<button class="filter-btn ${currentFilterZone === z.id ? 'filter-active' : ''}" onclick="filterMarkersByZone(${z.id})">${z.name}</button>`);
             
             html += `</div><div class="panel-title">Factories</div>`;
@@ -259,6 +310,28 @@
             centers.forEach(c => html += `<div class="list-item" onclick="zoomToLocation(${c.lat}, ${c.lng})">📍 <div><div class="item-name">${c.name}</div><div class="item-detail">Factory: ${c.factory}</div></div></div>`);
             
             sidePanel.innerHTML = html;
+            
+            // Restore collapsed state
+            if (isPanelCollapsed) {
+                sidePanel.classList.add('collapsed');
+                sidePanel.querySelector('.panel-toggle').innerText = '▶';
+            }
+        }
+        
+        function toggleSidePanel(e) {
+            e.stopPropagation();
+            const sidePanel = document.querySelector('.side-panel');
+            const btn = e.target;
+            isPanelCollapsed = !isPanelCollapsed;
+            
+            if (isPanelCollapsed) {
+                sidePanel.classList.add('collapsed');
+                btn.innerText = '▶';
+            } else {
+                sidePanel.classList.remove('collapsed');
+                btn.innerText = '◀';
+            }
+            setTimeout(() => { if (map) map.invalidateSize(); }, 300);
         }
         
         function zoomToLocation(lat, lng) { if (map) map.setView([lat, lng], 14); }
@@ -272,6 +345,7 @@
             setTimeout(() => map.invalidateSize(), 200);
         }
 
+        // Dashboard logic
         function updateAdminCharts() {
             const ctx1 = document.getElementById('pieChart')?.getContext('2d');
             const ctx2 = document.getElementById('barChart')?.getContext('2d');
@@ -337,6 +411,7 @@
             if (menu && dotMenu && !dotMenu.contains(event.target)) menu.classList.remove('show');
         }
 
+        // Form Modals
         let currentRecordType = '';
         function openModal(type) {
             currentRecordType = type;
@@ -345,37 +420,16 @@
             const body = document.getElementById('modalBody');
             if (type === 'delivery') {
                 title.innerText = 'Record Tea Delivery';
-                body.innerHTML = `
-                    <label>Farmer</label><select id="deliveryFarmer">${locations.farmers.map(f => `<option value="${f.name}">${f.name}</option>`).join('')}</select>
-                    <label>Weight (kg)</label><input type="number" id="deliveryWeight" placeholder="kg">
-                    <label>Leaf Grade</label><select id="deliveryGrade"><option>A</option><option>B</option><option>C</option></select>
-                    <button onclick="submitDelivery()">Submit</button>
-                `;
+                body.innerHTML = `<label>Farmer</label><select id="deliveryFarmer">${locations.farmers.map(f => `<option value="${f.name}">${f.name}</option>`).join('')}</select><label>Weight (kg)</label><input type="number" id="deliveryWeight" placeholder="kg"><label>Leaf Grade</label><select id="deliveryGrade"><option>A</option><option>B</option><option>C</option></select><button onclick="submitDelivery()">Submit</button>`;
             } else if (type === 'soil') {
                 title.innerText = 'Record Soil Sample';
-                body.innerHTML = `
-                    <label>Farmer / Location</label><input id="soilLocation" placeholder="Farm name or ID">
-                    <label>Organic Carbon (%)</label><input type="number" step="0.1" id="soilOC">
-                    <label>pH</label><input type="number" step="0.1" id="soilPH">
-                    <label>Nitrogen (mg/kg)</label><input type="number" id="soilN">
-                    <button onclick="submitSoilSample()">Submit</button>
-                `;
+                body.innerHTML = `<label>Farmer / Location</label><input id="soilLocation" placeholder="Farm name or ID"><label>Organic Carbon (%)</label><input type="number" step="0.1" id="soilOC"><label>pH</label><input type="number" step="0.1" id="soilPH"><label>Nitrogen (mg/kg)</label><input type="number" id="soilN"><button onclick="submitSoilSample()">Submit</button>`;
             } else if (type === 'fertilizer') {
                 title.innerText = 'Record Fertilizer Distribution';
-                body.innerHTML = `
-                    <label>Farmer</label><select id="fertFarmer">${locations.farmers.map(f => `<option value="${f.name}">${f.name}</option>`).join('')}</select>
-                    <label>Fertilizer Type</label><select id="fertType"><option>NPK 25:5:5</option><option>CAN</option><option>Urea</option></select>
-                    <label>Quantity (kg)</label><input type="number" id="fertQty">
-                    <button onclick="submitFertilizer()">Submit</button>
-                `;
+                body.innerHTML = `<label>Farmer</label><select id="fertFarmer">${locations.farmers.map(f => `<option value="${f.name}">${f.name}</option>`).join('')}</select><label>Fertilizer Type</label><select id="fertType"><option>NPK 25:5:5</option><option>CAN</option><option>Urea</option></select><label>Quantity (kg)</label><input type="number" id="fertQty"><button onclick="submitFertilizer()">Submit</button>`;
             } else if (type === 'carbon') {
                 title.innerText = 'Register Carbon Project';
-                body.innerHTML = `
-                    <label>Project Name</label><input id="carbonName" placeholder="Project name">
-                    <label>Methodology</label><select id="carbonMethod"><option>VM0042 (SOC)</option><option>VM0047 (ARR)</option></select>
-                    <label>Area (ha)</label><input type="number" id="carbonArea">
-                    <button onclick="submitCarbonProject()">Register</button>
-                `;
+                body.innerHTML = `<label>Project Name</label><input id="carbonName" placeholder="Project name"><label>Methodology</label><select id="carbonMethod"><option>VM0042 (SOC)</option><option>VM0047 (ARR)</option></select><label>Area (ha)</label><input type="number" id="carbonArea"><button onclick="submitCarbonProject()">Register</button>`;
             }
             modal.style.display = 'flex';
         }
@@ -387,8 +441,7 @@
             const grade = document.getElementById('deliveryGrade').value;
             if (!farmer || isNaN(weight) || weight <= 0) { alert("Enter valid weight"); return; }
             deliveries.push({ farmer, weight, date: new Date().toISOString().split('T')[0], grade });
-            alert("Delivery recorded!");
-            closeModal();
+            alert("Delivery recorded!"); closeModal();
             if (currentRole === 'admin') { renderAdminDashboard(); }
         }
         function submitSoilSample() {
@@ -396,8 +449,7 @@
             const oc = parseFloat(document.getElementById('soilOC').value);
             if (!location || isNaN(oc)) { alert("Enter location and OC%"); return; }
             soilSamples.push({ location, oc, ph: document.getElementById('soilPH').value, n: document.getElementById('soilN').value, date: new Date().toISOString() });
-            alert("Soil sample recorded!");
-            closeModal();
+            alert("Soil sample recorded!"); closeModal();
         }
         function submitFertilizer() {
             const farmer = document.getElementById('fertFarmer').value;
@@ -405,8 +457,7 @@
             const type = document.getElementById('fertType').value;
             if (!farmer || isNaN(qty) || qty <= 0) { alert("Enter valid quantity"); return; }
             fertilizerDistributions.push({ farmer, type, qty, date: new Date().toISOString().split('T')[0] });
-            alert("Fertilizer distribution recorded!");
-            closeModal();
+            alert("Fertilizer distribution recorded!"); closeModal();
             if (currentRole === 'admin') { renderAdminDashboard(); }
         }
         function submitCarbonProject() {
@@ -415,11 +466,11 @@
             const methodology = document.getElementById('carbonMethod').value;
             if (!name || isNaN(area) || area <= 0) { alert("Enter name and area"); return; }
             carbonProjects.push({ id: carbonProjects.length + 1, name, methodology: methodology === "VM0042 (SOC)" ? "VM0042" : "VM0047", areaHa: area, estCredits: area * 5, status: "Pending", issued: 0 });
-            alert("Carbon project registered!");
-            closeModal();
+            alert("Carbon project registered!"); closeModal();
             if (currentRole === 'admin') { renderAdminDashboard(); }
         }
 
+        // System logic
         function logout() {
             clearLoginState();
             isLoggedIn = false;
@@ -459,11 +510,32 @@
             }
         }
         
+        function toggleTabs() {
+            isTabsCollapsed = !isTabsCollapsed;
+            const tabs = document.getElementById('tabsContainer');
+            const btn = document.getElementById('tabsToggleBtn');
+            if (isTabsCollapsed) {
+                tabs.classList.add('collapsed');
+                btn.innerText = '▲';
+            } else {
+                tabs.classList.remove('collapsed');
+                btn.innerText = '▼';
+            }
+        }
+        
         function buildUI() {
             const tabsContainer = document.getElementById('tabsContainer');
             const pageContainer = document.getElementById('pageContainer');
             tabsContainer.innerHTML = '';
             pageContainer.innerHTML = '';
+            
+            // Add Tabs Toggle Button
+            const toggleBtn = document.createElement('div');
+            toggleBtn.className = 'tabs-toggle';
+            toggleBtn.id = 'tabsToggleBtn';
+            toggleBtn.innerText = '▼';
+            toggleBtn.onclick = toggleTabs;
+            tabsContainer.appendChild(toggleBtn);
             
             let tabs = currentRole === 'admin' ? [
                 { id: 'map', label: 'Map', icon: '🗺️' },
@@ -476,7 +548,7 @@
             tabs.forEach(tab => {
                 const btn = document.createElement('div');
                 btn.className = 'tab';
-                btn.innerHTML = `<span style="font-size:20px;">${tab.icon}</span><span>${tab.label}</span>`;
+                btn.innerHTML = `<span class="tab-icon">${tab.icon}</span><span>${tab.label}</span>`;
                 btn.onclick = () => showPage(tab.id);
                 tabsContainer.appendChild(btn);
                 const pageDiv = document.createElement('div');
@@ -543,6 +615,7 @@
             a.click();
         }
 
+        // Init
         const savedState = loadLoginState();
         if (savedState.logged) {
             currentRole = savedState.role;
@@ -585,6 +658,8 @@
         window.submitSoilSample = submitSoilSample;
         window.submitFertilizer = submitFertilizer;
         window.submitCarbonProject = submitCarbonProject;
+        window.toggleSidePanel = toggleSidePanel;
+        window.toggleTabs = toggleTabs;
         document.addEventListener('click', closeMenuOnClickOutside);
         document.getElementById('password').addEventListener('keypress', function(e) { if (e.key === 'Enter') doLogin(); });
     </script>
