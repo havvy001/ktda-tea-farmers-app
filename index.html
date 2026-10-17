@@ -4,9 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>KTDA GIS – Carbon, Soil & Fertilizer Management</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- MapLibre GL JS -->
+    <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
+    <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f4f0; height: 100dvh; overflow: hidden; touch-action: pan-x pan-y; }
@@ -22,7 +25,6 @@
         /* --- APP LAYOUT --- */
         .app-container { display: none; height: 100dvh; flex-direction: column; overflow: hidden; }
         
-        /* Header with Menu Toggle */
         .header { background: #2c5e2e; color: white; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; z-index: 100; }
         .header-left { display: flex; align-items: center; gap: 12px; }
         .menu-btn { background: none; border: none; color: white; font-size: 24px; cursor: pointer; padding: 5px; display: flex; align-items: center; }
@@ -41,7 +43,6 @@
         .tab.active { background: #2c5e2e; color: white; }
         .tab-icon { font-size: 18px; }
         
-        /* Toggle Button for Tabs */
         .tabs-toggle {
             position: absolute; top: -24px; left: 50%; transform: translateX(-50%);
             background: white; border: 1px solid #ddd; border-bottom: none;
@@ -88,11 +89,11 @@
         .list-item:hover { background: #e8f5e9; transform: translateX(3px); }
         
         .map-wrapper { flex: 1; position: relative; z-index: 1; min-height: 0; }
-        .map-container { height: 100%; width: 100%; position: relative; z-index: 0; }
         #map { height: 100%; width: 100%; }
         
-        /* Fix for Leaflet controls to not be hidden by header */
-        .leaflet-top { top: 10px; }
+        /* MapLibre specific overrides */
+        .maplibregl-ctrl-top-left { top: 10px; left: 10px; }
+        .maplibregl-popup-content { padding: 10px; border-radius: 8px; font-size: 14px; }
         
         .legend { position: absolute; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); right: 10px; background: rgba(255,255,255,0.95); padding: 8px 12px; border-radius: 8px; font-size: 11px; z-index: 100; }
         .legend-color { width: 12px; height: 12px; display: inline-block; margin-right: 5px; border-radius: 2px; }
@@ -214,7 +215,7 @@
         let currentRole = null;
         let map = null;
         let currentFilterZone = null;
-        let markers = { factories: [], farmers: [], centers: [], zones: [] };
+        let markers = []; // MapLibre markers array
         let adminSubView = 'farmers';
         let pieChart = null;
         let barChart = null;
@@ -247,7 +248,7 @@
 
         function getZoneCenter(zoneId) {
             const zone = locations.teaZones.find(z => z.id === zoneId);
-            return zone ? { lat: zone.lat, lng: zone.lng } : null;
+            return zone ? [zone.lng, zone.lat] : null; // MapLibre uses [lng, lat]
         }
         function filterMarkersByZone(zoneId) {
             currentFilterZone = zoneId;
@@ -255,40 +256,59 @@
             updateMapMarkers();
             renderSidePanels();
         }
+        
         function updateMapMarkers() {
             if (!map) return;
-            markers.factories.forEach(m => map.removeLayer(m));
-            markers.farmers.forEach(m => map.removeLayer(m));
-            markers.centers.forEach(m => map.removeLayer(m));
-            markers.zones.forEach(m => map.removeLayer(m));
-            markers = { factories: [], farmers: [], centers: [], zones: [] };
+            
+            // Remove existing markers
+            markers.forEach(m => m.remove());
+            markers = [];
             
             let filteredFactories = currentFilterZone ? locations.factories.filter(f => f.zoneId === currentFilterZone) : locations.factories;
             let filteredFarmers = currentFilterZone ? locations.farmers.filter(f => f.zoneId === currentFilterZone) : locations.farmers;
             let filteredCenters = currentFilterZone ? locations.centers.filter(c => c.zoneId === currentFilterZone) : locations.centers;
             let filteredZones = currentFilterZone ? locations.teaZones.filter(z => z.id === currentFilterZone) : locations.teaZones;
             
+            // Factories (Red)
             filteredFactories.forEach(f => {
-                const marker = L.marker([f.lat, f.lng], { icon: L.divIcon({ html: '<div style="background:#e74c3c; width:12px; height:12px; border-radius:50%; border:2px solid white;"></div>', iconSize: [12,12] }) }).addTo(map);
-                marker.bindPopup(`<b>Factory: ${f.name}</b><br>Region: ${f.region}<br>Capacity: ${f.capacity.toLocaleString()} kg/day`);
-                markers.factories.push(marker);
+                const popup = new maplibregl.Popup({ offset: 25 }).setHTML(`<b>Factory: ${f.name}</b><br>Region: ${f.region}<br>Capacity: ${f.capacity.toLocaleString()} kg/day`);
+                const marker = new maplibregl.Marker({ color: '#e74c3c' })
+                    .setLngLat([f.lng, f.lat])
+                    .setPopup(popup)
+                    .addTo(map);
+                markers.push(marker);
             });
+            
+            // Farmers (Green)
             filteredFarmers.forEach(f => {
-                const marker = L.marker([f.lat, f.lng], { icon: L.divIcon({ html: '<div style="background:#27ae60; width:12px; height:12px; border-radius:50%; border:2px solid white;"></div>', iconSize: [12,12] }) }).addTo(map);
-                marker.bindPopup(`<b>Farmer: ${f.name}</b><br>ID: ${f.number}<br>${f.acres} acres`);
-                markers.farmers.push(marker);
+                const popup = new maplibregl.Popup({ offset: 25 }).setHTML(`<b>Farmer: ${f.name}</b><br>ID: ${f.number}<br>${f.acres} acres`);
+                const marker = new maplibregl.Marker({ color: '#27ae60' })
+                    .setLngLat([f.lng, f.lat])
+                    .setPopup(popup)
+                    .addTo(map);
+                markers.push(marker);
             });
+            
+            // Centers (Orange)
             filteredCenters.forEach(c => {
-                const marker = L.marker([c.lat, c.lng], { icon: L.divIcon({ html: '<div style="background:#f39c12; width:12px; height:12px; border-radius:50%; border:2px solid white;"></div>', iconSize: [12,12] }) }).addTo(map);
-                marker.bindPopup(`<b>Center: ${c.name}</b><br>Factory: ${c.factory}<br>Weighbridge: ${c.has_weighbridge ? 'Yes' : 'No'}`);
-                markers.centers.push(marker);
+                const popup = new maplibregl.Popup({ offset: 25 }).setHTML(`<b>Center: ${c.name}</b><br>Factory: ${c.factory}<br>Weighbridge: ${c.has_weighbridge ? 'Yes' : 'No'}`);
+                const marker = new maplibregl.Marker({ color: '#f39c12' })
+                    .setLngLat([c.lng, c.lat])
+                    .setPopup(popup)
+                    .addTo(map);
+                markers.push(marker);
             });
+            
+            // Zones (Dark Green)
             filteredZones.forEach(z => {
                 const center = getZoneCenter(z.id);
                 if (center) {
-                    const marker = L.marker([center.lat, center.lng], { icon: L.divIcon({ html: '<div style="background:#2c5e2e; width:12px; height:12px; border-radius:50%; border:2px solid white;"></div>', iconSize: [12,12] }) }).addTo(map);
-                    marker.bindPopup(`<b>Zone: ${z.name}</b><br>${z.acres.toLocaleString()} acres`);
-                    markers.zones.push(marker);
+                    const popup = new maplibregl.Popup({ offset: 25 }).setHTML(`<b>Zone: ${z.name}</b><br>${z.acres.toLocaleString()} acres`);
+                    const marker = new maplibregl.Marker({ color: '#2c5e2e' })
+                        .setLngLat(center)
+                        .setPopup(popup)
+                        .addTo(map);
+                    markers.push(marker);
                 }
             });
         }
@@ -329,49 +349,67 @@
             } else {
                 sidePanel.classList.remove('collapsed');
             }
-            setTimeout(() => { if (map) map.invalidateSize(); }, 300);
+            setTimeout(() => { if (map) map.resize(); }, 300); // MapLibre uses resize()
         }
         
-        function zoomToLocation(lat, lng) { if (map) map.setView([lat, lng], 14); }
+        function zoomToLocation(lat, lng) { 
+            if (map) map.flyTo({ center: [lng, lat], zoom: 14 }); // MapLibre syntax
+        }
         
         function initMap() {
             if (map) return;
-            // Prevent mobile reloading on zoom
-            L.TileLayer.prototype.options.referrerPolicy = 'strict-origin-when-cross-origin';
             
-            map = L.map('map', { 
-                zoomControl: false, // Disable default zoom control to place it top-left
-                tap: false // Prevents mobile app from refreshing page on tap
-            }).setView([0.5, 36.5], 8);
-
-            // Add Zoom Control to Top-Left explicitly
-            L.control.zoom({ position: 'topleft' }).addTo(map);
-            
-            // Basemaps
-            // Using CartoDB Voyager for Street map (More reliable on mobile WebViews than OSM)
-            const streetMap = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { 
-                attribution: '&copy; OpenStreetMap &copy; CARTO',
-                maxZoom: 19
-            });
-            
-            const satelliteMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { 
-                attribution: 'Tiles &copy; Esri',
-                maxZoom: 19
+            map = new maplibregl.Map({
+                container: 'map',
+                style: 'https://styles.maptoolkit.org/summer.json', // MapToolkit Free Keyless Style
+                center: [36.5, 0.5], // [lng, lat]
+                zoom: 8,
+                attributionControl: true
             });
 
-            // Set Esri Satellite as the default map
-            satelliteMap.addTo(map);
+            // Add default controls (Zoom and scale)
+            map.addControl(new maplibregl.NavigationControl(), 'top-left');
+            map.addControl(new maplibregl.ScaleControl({ maxWidth: 100, unit: 'metric' }), 'bottom-left');
 
-            // Add Layer Control (Basemap switch)
-            const baseMaps = {
-                "Satellite (Esri)": satelliteMap,
-                "Street Map": streetMap
-            };
-            L.control.layers(baseMaps, null, { position: 'topleft' }).addTo(map);
+            // Add a layer switcher (Street vs Satellite) using free public raster tiles
+            map.on('load', () => {
+                // Add Satellite layer as an optional source
+                map.addSource('satellite', {
+                    type: 'raster',
+                    tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+                    tileSize: 256,
+                    attribution: 'Tiles &copy; Esri'
+                });
+                
+                map.addLayer({
+                    id: 'satellite-layer',
+                    type: 'raster',
+                    source: 'satellite',
+                    layout: { visibility: 'none' } // Hidden by default
+                });
 
-            updateMapMarkers();
+                // Add a simple toggle button manually in the top right
+                const toggleBtn = document.createElement('button');
+                toggleBtn.className = 'maplibregl-ctrl maplibregl-ctrl-group';
+                toggleBtn.innerHTML = '&#128752;'; // 🛰️ Satellite icon
+                toggleBtn.title = 'Toggle Satellite';
+                toggleBtn.style.fontSize = '18px';
+                toggleBtn.style.width = '30px';
+                toggleBtn.style.height = '30px';
+                toggleBtn.style.marginTop = '10px';
+                
+                toggleBtn.onclick = () => {
+                    const isVisible = map.getLayoutProperty('satellite-layer', 'visibility') === 'visible';
+                    map.setLayoutProperty('satellite-layer', 'visibility', isVisible ? 'none' : 'visible');
+                };
+
+                document.querySelector('.maplibregl-ctrl-top-left').appendChild(toggleBtn);
+
+                // Initialize markers now that map is loaded
+                updateMapMarkers();
+            });
+
             renderSidePanels();
-            setTimeout(() => map.invalidateSize(), 200);
         }
 
         function updateAdminCharts() {
@@ -581,7 +619,7 @@
                 pageContainer.appendChild(pageDiv);
             });
             
-            document.getElementById('page-map').innerHTML = `<div class="map-layout"><div class="side-panel"></div><div class="map-wrapper"><div class="map-container"><div id="map"></div></div><div class="legend"><div><span class="legend-color" style="background:#e74c3c;"></span> Factories</div><div><span class="legend-color" style="background:#27ae60;"></span> Farmers</div><div><span class="legend-color" style="background:#f39c12;"></span> Buying Centers</div><div><span class="legend-color" style="background:#2c5e2e;"></span> Tea Zones</div></div></div></div>`;
+            document.getElementById('page-map').innerHTML = `<div class="map-layout"><div class="side-panel"></div><div class="map-wrapper"><div id="map"></div><div class="legend"><div><span class="legend-color" style="background:#e74c3c;"></span> Factories</div><div><span class="legend-color" style="background:#27ae60;"></span> Farmers</div><div><span class="legend-color" style="background:#f39c12;"></span> Buying Centers</div><div><span class="legend-color" style="background:#2c5e2e;"></span> Tea Zones</div></div></div></div>`;
             
             initMap();
             
@@ -624,7 +662,7 @@
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             const activeTab = Array.from(document.querySelectorAll('.tab')).find(t => t.innerText.toLowerCase().includes(pageId));
             if (activeTab) activeTab.classList.add('active');
-            if (pageId === 'map' && map) setTimeout(() => map.invalidateSize(), 100);
+            if (pageId === 'map' && map) setTimeout(() => map.resize(), 100);
         }
         
         function exportCSV() {
