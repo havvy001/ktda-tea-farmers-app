@@ -348,8 +348,9 @@
             L.control.zoom({ position: 'topleft' }).addTo(map);
             
             // Basemaps
-            const streetMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
-                attribution: '© OpenStreetMap contributors',
+            // Using CartoDB Voyager for Street map (More reliable on mobile WebViews than OSM)
+            const streetMap = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { 
+                attribution: '&copy; OpenStreetMap &copy; CARTO',
                 maxZoom: 19
             });
             
@@ -358,7 +359,7 @@
                 maxZoom: 19
             });
 
-            // Set Esri Satellite as the default map instead of Street Map
+            // Set Esri Satellite as the default map
             satelliteMap.addTo(map);
 
             // Add Layer Control (Basemap switch)
