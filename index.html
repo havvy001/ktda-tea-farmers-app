@@ -1,9 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>KTDA GIS – Carbon, Soil & Fertilizer Management</title>
+    <title>KTDA GIS � Carbon, Soil & Fertilizer Management</title>
     <!-- MapLibre GL JS -->
     <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
     <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
@@ -162,17 +162,17 @@
     <script>
         // HTML Entities for icons prevent encoding corruption
         const icons = {
-            map: '&#128506;', // 🗺️
-            chart: '&#128202;', // 📊
-            clipboard: '&#128203;', // 📋
-            shield: '&#128737;', // 🛡️
-            truck: '&#128666;', // 🚚
-            leaf: '&#127807;', // 🌿
-            pill: '&#128138;', // 💊
-            file: '&#128196;', // 📄
-            factory: '&#127981;', // 🏭
-            farmer: '&#128100;', // 👤
-            pin: '&#128205;' // 📍
+            map: '&#128506;', // ???
+            chart: '&#128202;', // ??
+            clipboard: '&#128203;', // ??
+            shield: '&#128737;', // ???
+            truck: '&#128666;', // ??
+            leaf: '&#127807;', // ??
+            pill: '&#128138;', // ??
+            file: '&#128196;', // ??
+            factory: '&#127981;', // ??
+            farmer: '&#128100;', // ??
+            pin: '&#128205;' // ??
         };
 
         const locations = {
@@ -356,12 +356,25 @@
             if (map) map.flyTo({ center: [lng, lat], zoom: 14 }); // MapLibre syntax
         }
         
+                // Force MapLibre to include a Referer header for WebViews
+        const originalFetch = window.fetch;
+        window.fetch = function() {
+            if (arguments[0] && typeof arguments[0] === 'string' && arguments[0].includes('tiles.openfreemap.org')) {
+                arguments[1] = arguments[1] || {};
+                arguments[1].headers = arguments[1].headers || {};
+                arguments[1].headers['Referer'] = window.location.href;
+            } else if (arguments[0] && typeof arguments[0] === 'object' && arguments[0].url && arguments[0].url.includes('tiles.openfreemap.org')) {
+                arguments[0].headers = arguments[0].headers || {};
+                arguments[0].headers['Referer'] = window.location.href;
+            }
+            return originalFetch.apply(this, arguments);
+        };
         function initMap() {
             if (map) return;
             
             map = new maplibregl.Map({
                 container: 'map',
-                style: 'https://styles.maptoolkit.org/summer.json', // MapToolkit Free Keyless Style
+                style: 'https://tiles.openfreemap.org/styles/liberty', // MapToolkit Free Keyless Style
                 center: [36.5, 0.5], // [lng, lat]
                 zoom: 8,
                 attributionControl: true
@@ -391,7 +404,7 @@
                 // Add a simple toggle button manually in the top right
                 const toggleBtn = document.createElement('button');
                 toggleBtn.className = 'maplibregl-ctrl maplibregl-ctrl-group';
-                toggleBtn.innerHTML = '&#128752;'; // 🛰️ Satellite icon
+                toggleBtn.innerHTML = '&#128752;'; // ??? Satellite icon
                 toggleBtn.title = 'Toggle Satellite';
                 toggleBtn.style.fontSize = '18px';
                 toggleBtn.style.width = '30px';
@@ -726,3 +739,4 @@
     </script>
 </body>
 </html>
+
