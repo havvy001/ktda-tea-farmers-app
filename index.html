@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-    <title>KTDA GIS � Carbon, Soil & Fertilizer Management</title>
+    <title>KTDA GIS – Carbon, Soil & Fertilizer Management</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -121,7 +121,7 @@
 <body>
     <div id="loginOverlay" class="login-overlay">
         <div class="login-card">
-            <h2>?? KTDA GIS</h2>
+            <h2>🌍 KTDA GIS</h2>
             <input type="text" id="username" placeholder="Username" autocomplete="off">
             <input type="password" id="password" placeholder="Password" autocomplete="off">
             <button onclick="doLogin()">Login</button>
@@ -137,11 +137,11 @@
                 <button class="menu-btn" id="menuToggleBtn" onclick="toggleSidePanel()">
                     <span style="font-size: 24px;">&#9776;</span>
                 </button>
-                <h1>?? KTDA GIS</h1>
+                <h1>🍃 KTDA GIS</h1>
             </div>
             <div>
                 <span id="userRoleBadge"></span> 
-                <button onclick="logout()" style="background:none; border:none; color:white; margin-left:10px; padding:0; font-size:16px;">??</button>
+                <button onclick="logout()" style="background:none; border:none; color:white; margin-left:10px; padding:0; font-size:16px;">🚪</button>
             </div>
         </div>
         <div class="tabs" id="tabsContainer"></div>
@@ -255,24 +255,24 @@
             
             filteredFactories.forEach(f => {
                 const marker = L.marker([f.lat, f.lng], { icon: L.divIcon({ html: '<div style="background:#e74c3c; width:12px; height:12px; border-radius:50%; border:2px solid white;"></div>', iconSize: [12,12] }) }).addTo(map);
-                marker.bindPopup(`<b>?? ${f.name}</b><br>Region: ${f.region}<br>Capacity: ${f.capacity.toLocaleString()} kg/day`);
+                marker.bindPopup(`<b>🏭 ${f.name}</b><br>Region: ${f.region}<br>Capacity: ${f.capacity.toLocaleString()} kg/day`);
                 markers.factories.push(marker);
             });
             filteredFarmers.forEach(f => {
                 const marker = L.marker([f.lat, f.lng], { icon: L.divIcon({ html: '<div style="background:#27ae60; width:12px; height:12px; border-radius:50%; border:2px solid white;"></div>', iconSize: [12,12] }) }).addTo(map);
-                marker.bindPopup(`<b>?? ${f.name}</b><br>ID: ${f.number}<br>${f.acres} acres`);
+                marker.bindPopup(`<b>👤 ${f.name}</b><br>ID: ${f.number}<br>${f.acres} acres`);
                 markers.farmers.push(marker);
             });
             filteredCenters.forEach(c => {
                 const marker = L.marker([c.lat, c.lng], { icon: L.divIcon({ html: '<div style="background:#f39c12; width:12px; height:12px; border-radius:50%; border:2px solid white;"></div>', iconSize: [12,12] }) }).addTo(map);
-                marker.bindPopup(`<b>?? ${c.name}</b><br>Factory: ${c.factory}<br>Weighbridge: ${c.has_weighbridge ? 'Yes' : 'No'}`);
+                marker.bindPopup(`<b>📍 ${c.name}</b><br>Factory: ${c.factory}<br>Weighbridge: ${c.has_weighbridge ? 'Yes' : 'No'}`);
                 markers.centers.push(marker);
             });
             filteredZones.forEach(z => {
                 const center = getZoneCenter(z.id);
                 if (center) {
                     const marker = L.marker([center.lat, center.lng], { icon: L.divIcon({ html: '<div style="background:#2c5e2e; width:12px; height:12px; border-radius:50%; border:2px solid white;"></div>', iconSize: [12,12] }) }).addTo(map);
-                    marker.bindPopup(`<b>?? ${z.name}</b><br>${z.acres.toLocaleString()} acres`);
+                    marker.bindPopup(`<b>🌿 ${z.name}</b><br>${z.acres.toLocaleString()} acres`);
                     markers.zones.push(marker);
                 }
             });
@@ -291,13 +291,13 @@
             zones.forEach(z => html += `<button class="filter-btn ${currentFilterZone === z.id ? 'filter-active' : ''}" onclick="filterMarkersByZone(${z.id})">${z.name}</button>`);
             
             html += `</div><div class="panel-title">Factories</div>`;
-            factories.forEach(f => html += `<div class="list-item" onclick="zoomToLocation(${f.lat}, ${f.lng})">?? <div><div class="item-name">${f.name}</div><div class="item-detail">${f.region}</div></div></div>`);
+            factories.forEach(f => html += `<div class="list-item" onclick="zoomToLocation(${f.lat}, ${f.lng})">🏭 <div><div class="item-name">${f.name}</div><div class="item-detail">${f.region}</div></div></div>`);
             
             html += `<div class="panel-title">Farmers</div>`;
-            farmers.forEach(f => html += `<div class="list-item" onclick="zoomToLocation(${f.lat}, ${f.lng})">?? <div><div class="item-name">${f.name}</div><div class="item-detail">${f.number} | ${f.acres} acres</div></div></div>`);
+            farmers.forEach(f => html += `<div class="list-item" onclick="zoomToLocation(${f.lat}, ${f.lng})">👤 <div><div class="item-name">${f.name}</div><div class="item-detail">${f.number} | ${f.acres} acres</div></div></div>`);
             
             html += `<div class="panel-title">Buying Centers</div>`;
-            centers.forEach(c => html += `<div class="list-item" onclick="zoomToLocation(${c.lat}, ${c.lng})">?? <div><div class="item-name">${c.name}</div><div class="item-detail">Factory: ${c.factory}</div></div></div>`);
+            centers.forEach(c => html += `<div class="list-item" onclick="zoomToLocation(${c.lat}, ${c.lng})">📍 <div><div class="item-name">${c.name}</div><div class="item-detail">Factory: ${c.factory}</div></div></div>`);
             
             sidePanel.innerHTML = html;
             
@@ -322,10 +322,8 @@
         
         function initMap() {
             if (map) return;
-            // Force OSM to accept the request from WebViews
-            L.TileLayer.prototype.options.referrerPolicy = 'strict-origin-when-cross-origin';
             map = L.map('map').setView([0.5, 36.5], 8);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '� OpenStreetMap contributors' }).addTo(map);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(map);
             updateMapMarkers();
             renderSidePanels();
             setTimeout(() => map.invalidateSize(), 200);
@@ -474,17 +472,17 @@
                 document.getElementById('appContainer').style.display = 'flex';
                 
                 const roleHtml = currentRole === 'admin' ?
-                    `<span style="display:flex;align-items:center;gap:5px;">??? Admin</span>
+                    `<span style="display:flex;align-items:center;gap:5px;">🛡️ Admin</span>
                      <div class="three-dot-menu" onclick="toggleMenu(event)">
-                        <span>?</span>
+                        <span>⋮</span>
                         <div id="threeDotContent" class="three-dot-content">
-                            <a onclick="switchAdminSubView('farmers')">?? Farmers</a>
-                            <a onclick="switchAdminSubView('fertilizer')">?? Fertilizer Assets</a>
-                            <a onclick="switchAdminSubView('carbon')">?? Carbon & SOC</a>
-                            <a onclick="switchAdminSubView('reports')">?? Reports</a>
+                            <a onclick="switchAdminSubView('farmers')">📄 Farmers</a>
+                            <a onclick="switchAdminSubView('fertilizer')">💊 Fertilizer Assets</a>
+                            <a onclick="switchAdminSubView('carbon')">🌿 Carbon & SOC</a>
+                            <a onclick="switchAdminSubView('reports')">📋 Reports</a>
                         </div>
                      </div>` :
-                    `<span style="display:flex;align-items:center;gap:5px;">?? Field Clerk</span>`;
+                    `<span style="display:flex;align-items:center;gap:5px;">📋 Field Clerk</span>`;
                 
                 document.getElementById('userRoleBadge').innerHTML = roleHtml;
                 buildUI();
@@ -520,11 +518,11 @@
             tabsContainer.appendChild(toggleBtn);
             
             let tabs = currentRole === 'admin' ? [
-                { id: 'map', label: 'Map', icon: '???' },
-                { id: 'dashboard', label: 'Dashboard', icon: '??' }
+                { id: 'map', label: 'Map', icon: '🗺️' },
+                { id: 'dashboard', label: 'Dashboard', icon: '📊' }
             ] : [
-                { id: 'map', label: 'Map', icon: '???' },
-                { id: 'records', label: 'Records', icon: '??' }
+                { id: 'map', label: 'Map', icon: '🗺️' },
+                { id: 'records', label: 'Records', icon: '📋' }
             ];
             
             tabs.forEach(tab => {
@@ -547,10 +545,10 @@
                 document.getElementById('page-records').innerHTML = `
                     <div class="flex-content">
                         <div class="records-grid">
-                            <div class="record-card" onclick="openModal('delivery')"><div class="record-icon">??</div><div>Record Delivery</div></div>
-                            <div class="record-card" onclick="openModal('soil')"><div class="record-icon">??</div><div>Soil Sample</div></div>
-                            <div class="record-card" onclick="openModal('fertilizer')"><div class="record-icon">??</div><div>Fertilizer Distribution</div></div>
-                            <div class="record-card" onclick="openModal('carbon')"><div class="record-icon">??</div><div>Carbon Project</div></div>
+                            <div class="record-card" onclick="openModal('delivery')"><div class="record-icon">🚚</div><div>Record Delivery</div></div>
+                            <div class="record-card" onclick="openModal('soil')"><div class="record-icon">🌱</div><div>Soil Sample</div></div>
+                            <div class="record-card" onclick="openModal('fertilizer')"><div class="record-icon">💊</div><div>Fertilizer Distribution</div></div>
+                            <div class="record-card" onclick="openModal('carbon')"><div class="record-icon">🌿</div><div>Carbon Project</div></div>
                         </div>
                     </div>`;
             } else {
@@ -607,17 +605,17 @@
             document.getElementById('appContainer').style.display = 'flex';
             
             const roleHtml = currentRole === 'admin' ?
-                `<span style="display:flex;align-items:center;gap:5px;">??? Admin</span>
+                `<span style="display:flex;align-items:center;gap:5px;">🛡️ Admin</span>
                  <div class="three-dot-menu" onclick="toggleMenu(event)">
-                    <span>?</span>
+                    <span>⋮</span>
                     <div id="threeDotContent" class="three-dot-content">
-                        <a onclick="switchAdminSubView('farmers')">?? Farmers</a>
-                        <a onclick="switchAdminSubView('fertilizer')">?? Fertilizer Assets</a>
-                        <a onclick="switchAdminSubView('carbon')">?? Carbon & SOC</a>
-                        <a onclick="switchAdminSubView('reports')">?? Reports</a>
+                        <a onclick="switchAdminSubView('farmers')">📄 Farmers</a>
+                        <a onclick="switchAdminSubView('fertilizer')">💊 Fertilizer Assets</a>
+                        <a onclick="switchAdminSubView('carbon')">🌿 Carbon & SOC</a>
+                        <a onclick="switchAdminSubView('reports')">📋 Reports</a>
                     </div>
                  </div>` :
-                `<span style="display:flex;align-items:center;gap:5px;">?? Field Clerk</span>`;
+                `<span style="display:flex;align-items:center;gap:5px;">📋 Field Clerk</span>`;
                 
             document.getElementById('userRoleBadge').innerHTML = roleHtml;
             buildUI();
@@ -646,5 +644,3 @@
     </script>
 </body>
 </html>
-
-
