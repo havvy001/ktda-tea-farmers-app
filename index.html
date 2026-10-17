@@ -1,18 +1,31 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>KTDA GIS � Carbon, Soil & Fertilizer Management</title>
-    <!-- MapLibre GL JS -->
+    <title>KTDA GIS – Carbon, Soil & Fertilizer Management</title>
     <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
     <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f4f0; height: 100dvh; overflow: hidden; touch-action: pan-x pan-y !important; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+        
+        /* 
+         * FIX FOR MOBILE ZOOM REFRESH:
+         * overscroll-behavior: none prevents the pull-to-refresh gesture.
+         * touch-action: pan-x pan-y limits gestures to map navigation.
+         */
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: #f0f4f0; 
+            height: 100dvh; 
+            overflow: hidden; 
+            touch-action: pan-x pan-y !important; 
+            user-select: none; 
+            -webkit-user-select: none; 
+            -webkit-touch-callout: none; 
+            overscroll-behavior: none;
+        }
         
         /* --- LOGIN --- */
         .login-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: env(safe-area-inset-bottom, 0px); background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 2000; }
@@ -91,7 +104,6 @@
         .map-wrapper { flex: 1; position: relative; z-index: 1; min-height: 0; }
         #map { height: 100%; width: 100%; }
         
-        /* MapLibre specific overrides */
         .maplibregl-ctrl-top-left { top: 10px; left: 10px; }
         .maplibregl-popup-content { padding: 10px; border-radius: 8px; font-size: 14px; }
         
@@ -160,19 +172,10 @@
     </div>
 
     <script>
-        // HTML Entities for icons prevent encoding corruption
         const icons = {
-            map: '&#128506;', // ???
-            chart: '&#128202;', // ??
-            clipboard: '&#128203;', // ??
-            shield: '&#128737;', // ???
-            truck: '&#128666;', // ??
-            leaf: '&#127807;', // ??
-            pill: '&#128138;', // ??
-            file: '&#128196;', // ??
-            factory: '&#127981;', // ??
-            farmer: '&#128100;', // ??
-            pin: '&#128205;' // ??
+            map: '&#128506;', chart: '&#128202;', clipboard: '&#128203;', shield: '&#128737;',
+            truck: '&#128666;', leaf: '&#127807;', pill: '&#128138;', file: '&#128196;',
+            factory: '&#127981;', farmer: '&#128100;', pin: '&#128205;'
         };
 
         const locations = {
@@ -197,6 +200,7 @@
                 { id: 3, name: "Rukuriri South Zone", acres: 7200, lat: 0.21, lng: 37.53 }
             ]
         };
+        
         let deliveries = [
             { farmer: "James Mwangi", weight: 450, date: "2026-05-20", grade: "A" },
             { farmer: "Mary Wanjiku", weight: 380, date: "2026-05-19", grade: "B" }
@@ -215,7 +219,7 @@
         let currentRole = null;
         let map = null;
         let currentFilterZone = null;
-        let markers = []; // MapLibre markers array
+        let markers = [];
         let adminSubView = 'farmers';
         let pieChart = null;
         let barChart = null;
@@ -248,18 +252,18 @@
 
         function getZoneCenter(zoneId) {
             const zone = locations.teaZones.find(z => z.id === zoneId);
-            return zone ? [zone.lng, zone.lat] : null; // MapLibre uses [lng, lat]
+            return zone ? [zone.lng, zone.lat] : null;
         }
+
         function filterMarkersByZone(zoneId) {
             currentFilterZone = zoneId;
             if (isLoggedIn) saveLoginState(currentRole, zoneId, adminSubView);
             updateMapMarkers();
-            renderSidePanels(); setTimeout(() => { if(map) map.resize(); }, 500); }
+            renderSidePanels();
+        }
         
         function updateMapMarkers() {
             if (!map) return;
-            
-            // Remove existing markers
             markers.forEach(m => m.remove());
             markers = [];
             
@@ -268,45 +272,26 @@
             let filteredCenters = currentFilterZone ? locations.centers.filter(c => c.zoneId === currentFilterZone) : locations.centers;
             let filteredZones = currentFilterZone ? locations.teaZones.filter(z => z.id === currentFilterZone) : locations.teaZones;
             
-            // Factories (Red)
             filteredFactories.forEach(f => {
                 const popup = new maplibregl.Popup({ offset: 25 }).setHTML(`<b>Factory: ${f.name}</b><br>Region: ${f.region}<br>Capacity: ${f.capacity.toLocaleString()} kg/day`);
-                const marker = new maplibregl.Marker({ color: '#e74c3c' })
-                    .setLngLat([f.lng, f.lat])
-                    .setPopup(popup)
-                    .addTo(map);
+                const marker = new maplibregl.Marker({ color: '#e74c3c' }).setLngLat([f.lng, f.lat]).setPopup(popup).addTo(map);
                 markers.push(marker);
             });
-            
-            // Farmers (Green)
             filteredFarmers.forEach(f => {
                 const popup = new maplibregl.Popup({ offset: 25 }).setHTML(`<b>Farmer: ${f.name}</b><br>ID: ${f.number}<br>${f.acres} acres`);
-                const marker = new maplibregl.Marker({ color: '#27ae60' })
-                    .setLngLat([f.lng, f.lat])
-                    .setPopup(popup)
-                    .addTo(map);
+                const marker = new maplibregl.Marker({ color: '#27ae60' }).setLngLat([f.lng, f.lat]).setPopup(popup).addTo(map);
                 markers.push(marker);
             });
-            
-            // Centers (Orange)
             filteredCenters.forEach(c => {
                 const popup = new maplibregl.Popup({ offset: 25 }).setHTML(`<b>Center: ${c.name}</b><br>Factory: ${c.factory}<br>Weighbridge: ${c.has_weighbridge ? 'Yes' : 'No'}`);
-                const marker = new maplibregl.Marker({ color: '#f39c12' })
-                    .setLngLat([c.lng, c.lat])
-                    .setPopup(popup)
-                    .addTo(map);
+                const marker = new maplibregl.Marker({ color: '#f39c12' }).setLngLat([c.lng, c.lat]).setPopup(popup).addTo(map);
                 markers.push(marker);
             });
-            
-            // Zones (Dark Green)
             filteredZones.forEach(z => {
                 const center = getZoneCenter(z.id);
                 if (center) {
                     const popup = new maplibregl.Popup({ offset: 25 }).setHTML(`<b>Zone: ${z.name}</b><br>${z.acres.toLocaleString()} acres`);
-                    const marker = new maplibregl.Marker({ color: '#2c5e2e' })
-                        .setLngLat(center)
-                        .setPopup(popup)
-                        .addTo(map);
+                    const marker = new maplibregl.Marker({ color: '#2c5e2e' }).setLngLat(center).setPopup(popup).addTo(map);
                     markers.push(marker);
                 }
             });
@@ -348,44 +333,28 @@
             } else {
                 sidePanel.classList.remove('collapsed');
             }
-            setTimeout(() => { if (map) map.resize(); }, 300); // MapLibre uses resize()
+            setTimeout(() => { if (map) map.resize(); }, 300);
         }
         
         function zoomToLocation(lat, lng) { 
-            if (map) map.flyTo({ center: [lng, lat], zoom: 14 }); // MapLibre syntax
+            if (map) map.flyTo({ center: [lng, lat], zoom: 14 }); 
         }
         
-                // Force MapLibre to include a Referer header for WebViews
-        const originalFetch = window.fetch;
-        window.fetch = function() {
-            if (arguments[0] && typeof arguments[0] === 'string' && arguments[0].includes('tiles.openfreemap.org')) {
-                arguments[1] = arguments[1] || {};
-                arguments[1].headers = arguments[1].headers || {};
-                arguments[1].headers['Referer'] = window.location.href;
-            } else if (arguments[0] && typeof arguments[0] === 'object' && arguments[0].url && arguments[0].url.includes('tiles.openfreemap.org')) {
-                arguments[0].headers = arguments[0].headers || {};
-                arguments[0].headers['Referer'] = window.location.href;
-            }
-            return originalFetch.apply(this, arguments);
-        };
         function initMap() {
             if (map) return;
             
             map = new maplibregl.Map({
                 container: 'map',
-                style: 'https://tiles.openfreemap.org/styles/liberty', // MapToolkit Free Keyless Style
-                center: [36.5, 0.5], // [lng, lat]
+                style: 'https://tiles.openfreemap.org/styles/liberty', 
+                center: [36.5, 0.5],
                 zoom: 8,
                 attributionControl: true
             });
 
-            // Add default controls (Zoom and scale)
             map.addControl(new maplibregl.NavigationControl(), 'top-left');
             map.addControl(new maplibregl.ScaleControl({ maxWidth: 100, unit: 'metric' }), 'bottom-left');
 
-            // Add a layer switcher (Street vs Satellite) using free public raster tiles
             map.on('load', () => {
-                // Add Satellite layer as an optional source
                 map.addSource('satellite', {
                     type: 'raster',
                     tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
@@ -397,13 +366,12 @@
                     id: 'satellite-layer',
                     type: 'raster',
                     source: 'satellite',
-                    layout: { visibility: 'none' } // Hidden by default
+                    layout: { visibility: 'none' }
                 });
 
-                // Add a simple toggle button manually in the top right
                 const toggleBtn = document.createElement('button');
                 toggleBtn.className = 'maplibregl-ctrl maplibregl-ctrl-group';
-                toggleBtn.innerHTML = '&#128752;'; // ??? Satellite icon
+                toggleBtn.innerHTML = '&#128752;'; 
                 toggleBtn.title = 'Toggle Satellite';
                 toggleBtn.style.fontSize = '18px';
                 toggleBtn.style.width = '30px';
@@ -417,11 +385,14 @@
 
                 document.querySelector('.maplibregl-ctrl-top-left').appendChild(toggleBtn);
 
-                // Initialize markers now that map is loaded
                 updateMapMarkers();
+                
+                // Force resize after initial load to prevent half-canvas
+                setTimeout(() => map.resize(), 300);
             });
 
-            renderSidePanels(); setTimeout(() => { if(map) map.resize(); }, 500); }
+            renderSidePanels();
+        }
 
         function updateAdminCharts() {
             const ctx1 = document.getElementById('pieChart')?.getContext('2d');
@@ -673,11 +644,10 @@
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             const activeTab = Array.from(document.querySelectorAll('.tab')).find(t => t.innerText.toLowerCase().includes(pageId));
             if (activeTab) activeTab.classList.add('active');
-                        if (pageId === 'map' && map) {
-                setTimeout(() => { 
-                    map.resize(); // Fixes the half-canvas issue in MapLibre
-                    if (markers.length === 0) updateMapMarkers(); 
-                }, 200);
+            
+            // Fix the half-canvas issue when switching back to the Map tab
+            if (pageId === 'map' && map) {
+                setTimeout(() => { map.resize(); }, 200);
             }
         }
         
@@ -742,5 +712,3 @@
     </script>
 </body>
 </html>
-
-
