@@ -159,7 +159,7 @@
     </div>
 
     <script>
-        // Using HTML Entities for icons to prevent encoding corruption
+        // HTML Entities for icons prevent encoding corruption
         const icons = {
             map: '&#128506;', // 🗺️
             chart: '&#128202;', // 📊
@@ -358,13 +358,13 @@
                 maxZoom: 19
             });
 
-            // Add default map
-            streetMap.addTo(map);
+            // Set Esri Satellite as the default map instead of Street Map
+            satelliteMap.addTo(map);
 
             // Add Layer Control (Basemap switch)
             const baseMaps = {
-                "Street Map": streetMap,
-                "Satellite": satelliteMap
+                "Satellite (Esri)": satelliteMap,
+                "Street Map": streetMap
             };
             L.control.layers(baseMaps, null, { position: 'topleft' }).addTo(map);
 
