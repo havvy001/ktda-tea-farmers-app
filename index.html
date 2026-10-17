@@ -10,11 +10,6 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
-        /* 
-         * FIX FOR MOBILE ZOOM REFRESH:
-         * overscroll-behavior: none prevents the pull-to-refresh gesture.
-         * touch-action: pan-x pan-y limits gestures to map navigation.
-         */
         body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
             background: #f0f4f0; 
@@ -226,6 +221,7 @@
         let isLoggedIn = false;
         let isPanelCollapsed = false;
         let isTabsCollapsed = false;
+        let userLocationMarker = null; // Tracks the user's GPS location marker
 
         const STORAGE_KEY = 'ktda_auth';
         const STORAGE_ROLE = 'ktda_role';
@@ -339,6 +335,72 @@
         function zoomToLocation(lat, lng) { 
             if (map) map.flyTo({ center: [lng, lat], zoom: 14 }); 
         }
+
+        // --- GEOLOCATION FUNCTION ---
+        function getUserLocation() {
+            if (!navigator.geolocation) {
+                alert("Geolocation is not supported by your browser/app.");
+                return;
+            }
+
+            // Show loading state on the button
+            const locateBtn = document.getElementById('locateBtn');
+            if (locateBtn) locateBtn.innerHTML = '&#8987;'; // Hourglass
+
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const lng = position.coords.longitude;
+                    const lat = position.coords.latitude;
+                    const accuracy = position.coords.accuracy;
+
+                    // Reset button
+                    if (locateBtn) locateBtn.innerHTML = '&#128205;'; // Pin
+
+                    // 1. Fly to user's location
+                    map.flyTo({ center: [lng, lat], zoom: 15 });
+
+                    // 2. Remove old location marker if it exists
+                    if (userLocationMarker) {
+                        userLocationMarker.remove();
+                    }
+
+                    // 3. Create a custom pulsing blue dot
+                    const el = document.createElement('div');
+                    el.className = 'user-location-dot';
+                    el.style.width = '20px';
+                    el.style.height = '20px';
+                    el.style.backgroundColor = '#007AFF';
+                    el.style.borderRadius = '50%';
+                    el.style.border = '3px solid white';
+                    el.style.boxShadow = '0 0 10px rgba(0,0,0,0.5)';
+
+                    // 4. Add marker to map
+                    userLocationMarker = new maplibregl.Marker({ element: el })
+                        .setLngLat([lng, lat])
+                        .setPopup(new maplibregl.Popup({ offset: 25 }).setHTML(`<b>Your Location</b><br>Accuracy: ~${Math.round(accuracy)} meters`))
+                        .addTo(map);
+
+                },
+                (error) => {
+                    if (locateBtn) locateBtn.innerHTML = '&#128205;'; // Reset button
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                            alert("Location permission denied. Please allow location access in your app settings.");
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            alert("Location information is unavailable.");
+                            break;
+                        case error.TIMEOUT:
+                            alert("The request to get your location timed out.");
+                            break;
+                        default:
+                            alert("An unknown error occurred while getting your location.");
+                            break;
+                    }
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        }
         
         function initMap() {
             if (map) return;
@@ -369,6 +431,7 @@
                     layout: { visibility: 'none' }
                 });
 
+                // --- ADD SATELLITE TOGGLE BUTTON ---
                 const toggleBtn = document.createElement('button');
                 toggleBtn.className = 'maplibregl-ctrl maplibregl-ctrl-group';
                 toggleBtn.innerHTML = '&#128752;'; 
@@ -376,7 +439,6 @@
                 toggleBtn.style.fontSize = '18px';
                 toggleBtn.style.width = '30px';
                 toggleBtn.style.height = '30px';
-                toggleBtn.style.marginTop = '10px';
                 
                 toggleBtn.onclick = () => {
                     const isVisible = map.getLayoutProperty('satellite-layer', 'visibility') === 'visible';
@@ -385,9 +447,22 @@
 
                 document.querySelector('.maplibregl-ctrl-top-left').appendChild(toggleBtn);
 
-                updateMapMarkers();
+                // --- ADD LOCATE ME BUTTON ---
+                const locateBtn = document.createElement('button');
+                locateBtn.id = 'locateBtn';
+                locateBtn.className = 'maplibregl-ctrl maplibregl-ctrl-group';
+                locateBtn.innerHTML = '&#128205;'; // 📍
+                locateBtn.title = 'Find My Location';
+                locateBtn.style.fontSize = '18px';
+                locateBtn.style.width = '30px';
+                locateBtn.style.height = '30px';
+                locateBtn.style.marginTop = '10px';
                 
-                // Force resize after initial load to prevent half-canvas
+                locateBtn.onclick = getUserLocation;
+
+                document.querySelector('.maplibregl-ctrl-top-left').appendChild(locateBtn);
+
+                updateMapMarkers();
                 setTimeout(() => map.resize(), 300);
             });
 
@@ -645,7 +720,6 @@
             const activeTab = Array.from(document.querySelectorAll('.tab')).find(t => t.innerText.toLowerCase().includes(pageId));
             if (activeTab) activeTab.classList.add('active');
             
-            // Fix the half-canvas issue when switching back to the Map tab
             if (pageId === 'map' && map) {
                 setTimeout(() => { map.resize(); }, 200);
             }
@@ -707,6 +781,7 @@
         window.submitCarbonProject = submitCarbonProject;
         window.toggleSidePanel = toggleSidePanel;
         window.toggleTabs = toggleTabs;
+        window.getUserLocation = getUserLocation;
         document.addEventListener('click', closeMenuOnClickOutside);
         document.getElementById('password').addEventListener('keypress', function(e) { if (e.key === 'Enter') doLogin(); });
     </script>
