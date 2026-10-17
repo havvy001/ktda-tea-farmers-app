@@ -12,7 +12,7 @@
     
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f4f0; height: 100dvh; overflow: hidden; touch-action: pan-x pan-y; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f4f0; height: 100dvh; overflow: hidden; touch-action: pan-x pan-y !important; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
         
         /* --- LOGIN --- */
         .login-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: env(safe-area-inset-bottom, 0px); background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 2000; }
@@ -254,8 +254,7 @@
             currentFilterZone = zoneId;
             if (isLoggedIn) saveLoginState(currentRole, zoneId, adminSubView);
             updateMapMarkers();
-            renderSidePanels();
-        }
+            renderSidePanels(); setTimeout(() => { if(map) map.resize(); }, 500); }
         
         function updateMapMarkers() {
             if (!map) return;
@@ -422,8 +421,7 @@
                 updateMapMarkers();
             });
 
-            renderSidePanels();
-        }
+            renderSidePanels(); setTimeout(() => { if(map) map.resize(); }, 500); }
 
         function updateAdminCharts() {
             const ctx1 = document.getElementById('pieChart')?.getContext('2d');
@@ -675,7 +673,12 @@
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             const activeTab = Array.from(document.querySelectorAll('.tab')).find(t => t.innerText.toLowerCase().includes(pageId));
             if (activeTab) activeTab.classList.add('active');
-            if (pageId === 'map' && map) setTimeout(() => map.resize(), 100);
+                        if (pageId === 'map' && map) {
+                setTimeout(() => { 
+                    map.resize(); // Fixes the half-canvas issue in MapLibre
+                    if (markers.length === 0) updateMapMarkers(); 
+                }, 200);
+            }
         }
         
         function exportCSV() {
@@ -739,4 +742,5 @@
     </script>
 </body>
 </html>
+
 
