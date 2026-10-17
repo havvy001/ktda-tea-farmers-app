@@ -1,9 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>KTDA GIS – Carbon, Soil & Fertilizer Management</title>
+    <title>KTDA GIS � Carbon, Soil & Fertilizer Management</title>
     <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
     <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -451,7 +451,7 @@
                 const locateBtn = document.createElement('button');
                 locateBtn.id = 'locateBtn';
                 locateBtn.className = 'maplibregl-ctrl maplibregl-ctrl-group';
-                locateBtn.innerHTML = '&#128205;'; // 📍
+                locateBtn.innerHTML = '&#128205;'; // ??
                 locateBtn.title = 'Find My Location';
                 locateBtn.style.fontSize = '18px';
                 locateBtn.style.width = '30px';
@@ -785,5 +785,48 @@
         document.addEventListener('click', closeMenuOnClickOutside);
         document.getElementById('password').addEventListener('keypress', function(e) { if (e.key === 'Enter') doLogin(); });
     </script>
-</body>
+<script>
+// Add this to your initMap function or run after map is created
+function locateUser(map) {
+    if (!navigator.geolocation) return;
+
+    // Add a location control button to the map
+    const locationControl = L.Control.extend({
+        options: { position: 'topleft' },
+        onAdd: function () {
+            const container = L.DomUtil.create('div', 'leaflet-bar leaflet-control leaflet-control-custom');
+            container.innerHTML = '??'; // Simple emoji icon
+            container.style.backgroundColor = 'white';
+            container.style.width = '34px';
+            container.style.height = '34px';
+            container.style.display = 'flex';
+            container.style.justifyContent = 'center';
+            container.style.alignItems = 'center';
+            container.style.cursor = 'pointer';
+            container.style.fontSize = '18px';
+
+            container.onclick = function (e) {
+                e.stopPropagation();
+                map.locate({ setView: true, maxZoom: 14, enableHighAccuracy: true, timeout: 10000 });
+            };
+            return container;
+        }
+    });
+    map.addControl(new locationControl());
+
+    // Handle successful location
+    map.on('locationfound', function (e) {
+        L.marker(e.latlng).addTo(map).bindPopup("You are here").openPopup();
+    });
+
+    // Handle errors silently (No more popups!)
+    map.on('locationerror', function (e) {
+        console.warn("Location access denied or timed out: " + e.message);
+        // Optional: Show a small toast, but don't block the app with an alert
+    });
+}
+
+// Hook it into initMap by replacing the initMap function call
+
 </html>
+
