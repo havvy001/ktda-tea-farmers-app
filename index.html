@@ -1,147 +1,98 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-    <title>KTDA GIS � Carbon, Soil & Fertilizer Management</title>
+    <title>KTDA GIS – Carbon, Soil & Fertilizer Management</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f4f0; height: 100dvh; overflow: hidden; }
+        
+        /* SVG Icon Styles */
+        .svg-icon { width: 1em; height: 1em; fill: currentColor; display: inline-block; vertical-align: -0.125em; }
+
         .login-overlay {
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: env(safe-area-inset-bottom, 0px);
-            background: rgba(0,0,0,0.8);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 2000;
+            position: fixed; top: 0; left: 0; right: 0; bottom: env(safe-area-inset-bottom, 0px);
+            background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 2000;
         }
-        .login-card {
-            background: white;
-            padding: 30px;
-            border-radius: 16px;
-            width: 90%;
-            max-width: 350px;
-            text-align: center;
-        }
+        .login-card { background: white; padding: 30px; border-radius: 16px; width: 90%; max-width: 350px; text-align: center; }
         .login-card h2 { color: #2c5e2e; margin-bottom: 20px; }
-        .login-card input {
-            width: 100%;
-            padding: 12px;
-            margin: 8px 0;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            font-size: 16px;
-        }
-        .login-card button {
-            width: 100%;
-            padding: 12px;
-            background: #2c5e2e;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            margin-top: 10px;
-            cursor: pointer;
-        }
+        .login-card input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }
+        .login-card button { width: 100%; padding: 12px; background: #2c5e2e; color: white; border: none; border-radius: 8px; font-size: 16px; margin-top: 10px; cursor: pointer; }
         .error-msg { color: red; font-size: 14px; margin-top: 10px; }
+        
         .app-container { display: none; height: 100dvh; flex-direction: column; overflow: hidden; }
         .header { background: #2c5e2e; color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
         .header h1 { font-size: 18px; display: flex; align-items: center; gap: 8px; }
-        /* TABS � ALWAYS ON TOP */
+        
+        /* TABS – ALWAYS ON TOP */
         .tabs {
-            display: flex;
-            background: white;
-            position: fixed !important;
-            bottom: env(safe-area-inset-bottom, 0px) !important;
-            left: 0 !important;
-            right: 0 !important;
-            z-index: 99999 !important;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-            flex-shrink: 0;
+            display: flex; background: white; position: fixed !important; 
+            bottom: env(safe-area-inset-bottom, 0px) !important; 
+            left: 0 !important; right: 0 !important; z-index: 99999 !important;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1); flex-shrink: 0;
         }
-        .tab { flex: 1; text-align: center; padding: 10px; cursor: pointer; font-size: 12px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+        .tab { flex: 1; text-align: center; padding: 10px; cursor: pointer; font-size: 12px; display: flex; flex-direction: column; align-items: center; gap: 4px; color: #333; }
         .tab.active { background: #2c5e2e; color: white; }
-        .page {
-            display: none;
-            height: calc(100dvh - 110px - env(safe-area-inset-bottom, 0px));
-            overflow-y: auto;
-            margin-top: 60px;
-            margin-bottom: 50px;
-        }
+        
+        .page { display: none; height: calc(100dvh - 110px - env(safe-area-inset-bottom, 0px)); overflow-y: auto; margin-top: 60px; margin-bottom: 50px; }
         .page.active { display: flex; flex-direction: column; }
         .flex-content { width: 100%; padding: 20px; }
         .card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        .stat-number { font-size: 28px; font-weight: bold; color: #2c5e2e; }
+        
         .stat-row { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 15px; margin-bottom: 20px; }
         .stat-card { flex: 1; min-width: 150px; background: white; border-radius: 12px; padding: 15px; text-align: center; }
+        .stat-number { font-size: 28px; font-weight: bold; color: #2c5e2e; }
+        
         .data-table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; margin-top: 10px; }
         .data-table th, .data-table td { padding: 10px; text-align: left; border-bottom: 1px solid #e0e0e0; }
         .data-table th { background: #2c5e2e; color: white; }
+        
         button { background: #2c5e2e; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; margin: 5px; }
         .print-btn { background: #2196f3; }
-        /* MAP LAYOUT � side panel above map */
-        .map-layout {
-            display: flex;
-            height: 100%;
-            width: 100%;
-            position: relative;
-            z-index: 1;
-        }
-        .side-panel {
-            width: 280px;
-            background: white;
-            border-right: 1px solid #ddd;
-            overflow-y: auto;
-            padding: 10px;
-            position: relative;
-            z-index: 5 !important;
-            flex-shrink: 0;
-        }
+        
+        /* MAP LAYOUT – side panel above map */
+        .map-layout { display: flex; height: 100%; width: 100%; position: relative; z-index: 1; }
+        .side-panel { width: 280px; background: white; border-right: 1px solid #ddd; overflow-y: auto; padding: 10px; position: relative; z-index: 5 !important; flex-shrink: 0; }
         .panel-title { font-size: 16px; font-weight: bold; color: #2c5e2e; margin: 10px 0; border-bottom: 2px solid #2c5e2e; }
         .filter-btn { background: #2c5e2e; color: white; border: none; padding: 5px 10px; border-radius: 20px; margin: 5px; cursor: pointer; font-size: 12px; }
         .filter-active { background: #1e3a1f; }
-        .list-item { padding: 8px; margin-bottom: 6px; background: #f9f9f9; border-radius: 6px; cursor: pointer; border-left: 3px solid #2c5e2e; }
+        .list-item { padding: 8px; margin-bottom: 6px; background: #f9f9f9; border-radius: 6px; cursor: pointer; border-left: 3px solid #2c5e2e; display: flex; align-items: center; gap: 8px; }
         .list-item:hover { background: #e8f5e9; transform: translateX(3px); }
         .map-wrapper { flex: 1; position: relative; z-index: 1; min-height: 0; }
         .map-container { height: 100%; width: 100%; position: relative; z-index: 0; }
         #map { height: 100%; width: 100%; }
-        .legend {
-            position: absolute;
-            bottom: calc(20px + env(safe-area-inset-bottom, 0px));
-            right: 10px;
-            background: rgba(255,255,255,0.95);
-            padding: 8px 12px;
-            border-radius: 8px;
-            font-size: 11px;
-            z-index: 100;
-        }
+        
+        .legend { position: absolute; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); right: 10px; background: rgba(255,255,255,0.95); padding: 8px 12px; border-radius: 8px; font-size: 11px; z-index: 100; }
         .legend-color { width: 12px; height: 12px; display: inline-block; margin-right: 5px; border-radius: 2px; }
+        
         .three-dot-menu { position: relative; display: inline-block; margin-left: 10px; cursor: pointer; }
-        .three-dot-content { display: none; position: absolute; right: 0; top: 100%; background: white; min-width: 180px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); border-radius: 8px; z-index: 100; margin-top: 5px; }
-        .three-dot-content a { display: block; padding: 10px 15px; color: #333; text-decoration: none; cursor: pointer; }
+        .three-dot-content { display: none; position: absolute; right: 0; top: 100%; background: white; min-width: 180px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); border-radius: 8px; z-index: 100; margin-top: 5px; color: #333;}
+        .three-dot-content a { display: flex; align-items: center; gap: 8px; padding: 10px 15px; color: #333; text-decoration: none; cursor: pointer; }
         .three-dot-content a:hover { background: #f0f0f0; }
         .show { display: block; }
+        
         .records-grid { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; margin-top: 20px; }
         .record-card { background: white; padding: 25px; border-radius: 12px; text-align: center; cursor: pointer; width: 180px; transition: transform 0.2s; }
         .record-card:hover { transform: translateY(-5px); background: #e8f5e9; }
-        .record-icon { font-size: 48px; margin-bottom: 10px; }
+        .record-icon { font-size: 48px; margin-bottom: 10px; color: #2c5e2e; }
+        
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center; }
         .modal-content { background: white; border-radius: 16px; padding: 20px; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .close-modal { font-size: 24px; cursor: pointer; }
         input, select, textarea { width: 100%; padding: 8px; margin: 8px 0; border: 1px solid #ddd; border-radius: 6px; }
+        
         @media (max-width: 768px) { .side-panel { width: 240px; } .stat-card { min-width: 120px; } }
     </style>
 </head>
 <body>
     <div id="loginOverlay" class="login-overlay">
         <div class="login-card">
-            <h2>?? KTDA GIS</h2>
+            <h2>🌍 KTDA GIS</h2>
             <input type="text" id="username" placeholder="Username" autocomplete="off">
             <input type="password" id="password" placeholder="Password" autocomplete="off">
             <button onclick="doLogin()">Login</button>
@@ -152,14 +103,21 @@
 
     <div id="appContainer" class="app-container">
         <div class="header">
-            <h1><i class="fas fa-leaf"></i> KTDA GIS</h1>
-            <div><span id="userRoleBadge"></span> <button onclick="logout()" style="background:none; border:none; color:white; margin-left:10px;"><i class="fas fa-sign-out-alt"></i></button></div>
+            <h1>
+                <svg class="svg-icon" viewBox="0 0 512 512"><path d="M272 96c-78.6 0-145.1 51.5-167.7 122.5c33.6-17 71.5-26.5 111.7-26.5h88c8.8 0 16 7.2 16 16s-7.2 16-16 16H216c-65.5 0-119.6 53.9-120 119.4c-60.6-16.7-104-71.3-104-135.4C-8 117 47 64 112 64h240c70 0 128.4 52.7 137.4 120h16.6c8.8 0 16 7.2 16 16s-7.2 16-16 16h-80c-64.8 0-119.7-45.5-136.6-106.5c24.3-30 61.4-49.5 102.6-49.5h128c8.8 0 16 7.2 16 16s-7.2 16-16 16H272z"/></svg> 
+                KTDA GIS
+            </h1>
+            <div>
+                <span id="userRoleBadge"></span> 
+                <button onclick="logout()" style="background:none; border:none; color:white; margin-left:10px; padding:0;">
+                    <svg class="svg-icon" style="font-size:18px;" viewBox="0 0 512 512"><path d="M377.9 105.9L500.7 228.7c7.2 7.2 11.3 17.1 11.3 27.3s-4.1 20.1-11.3 27.3L377.9 406.1c-6.4 6.4-15 9.9-24 9.9c-18.7 0-33.9-15.2-33.9-33.9l0-62.1-128 0c-17.7 0-32-14.3-32-32l0-64c0-17.7 14.3-32 32-32l128 0 0-62.1c0-18.7 15.2-33.9 33.9-33.9c9 0 17.6 3.6 24 9.9zM160 96L96 96c-17.7 0-32 14.3-32 32l0 256c0 17.7 14.3 32 32 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-64 0c-53 0-96-43-96-96L0 128C0 75 43 32 96 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32z"/></svg>
+                </button>
+            </div>
         </div>
         <div class="tabs" id="tabsContainer"></div>
         <div id="pageContainer"></div>
     </div>
 
-    <!-- Modal for record forms -->
     <div id="recordModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -171,7 +129,19 @@
     </div>
 
     <script>
-        // Shared data (mock + user-added)
+        // SVG Icons as strings (saves us from loading external fonts)
+        const icons = {
+            map: '<svg class="svg-icon" viewBox="0 0 576 512"><path d="M384 476.1L192 421.2l0-385.3L384 90.8l0 385.3zm32-1.2l0-386.5L543.1 37.5c15.8-6.3 32.9 5.3 32.9 22.3l0 358.3c0 10.4-6.3 19.8-16 24l-143.9 57.3zM32 32L160 77.6l0 386.5L17.2 418.6C6.3 414.1 0 403.5 0 391.7l0-337.1C0 36.3 15.2 25 32 32z"/></svg>',
+            chart: '<svg class="svg-icon" viewBox="0 0 512 512"><path d="M64 64c0-17.7-14.3-32-32-32S0 46.3 0 64L0 400c0 44.2 35.8 80 80 80l400 0c17.7 0 32-14.3 32-32s-14.3-32-32-32L80 416c-8.8 0-16-7.2-16-16L64 64zm406.6 86.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L320 210.7l-57.4-57.4c-12.5-12.5-32.8-12.5-45.3 0l-112 112c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L240 221.3l57.4 57.4c12.5 12.5 32.8 12.5 45.3 0l128-128z"/></svg>',
+            clipboard: '<svg class="svg-icon" viewBox="0 0 384 512"><path d="M192 0c-41.8 0-77.4 26.7-90.5 64L64 64C28.7 64 0 92.7 0 128L0 448c0 35.3 28.7 64 64 64l256 0c35.3 0 64-28.7 64-64l0-320c0-35.3-28.7-64-64-64l-37.5 0C269.4 26.7 233.8 0 192 0zm0 64a32 32 0 1 1 0 64 32 32 0 1 1 0-64zM72 272a24 24 0 1 1 48 0 24 24 0 1 1 -48 0zm104-16l128 0c8.8 0 16 7.2 16 16s-7.2 16-16 16l-128 0c-8.8 0-16-7.2-16-16s7.2-16 16-16zM72 368a24 24 0 1 1 48 0 24 24 0 1 1 -48 0zm104-16l128 0c8.8 0 16 7.2 16 16s-7.2 16-16 16l-128 0c-8.8 0-16-7.2-16-16s7.2-16 16-16z"/></svg>',
+            shield: '<svg class="svg-icon" viewBox="0 0 512 512"><path d="M256 0c4.6 0 9.2 1 13.4 2.9L457.7 82.8c22 9.3 38.4 31 38.3 57.2c-.5 99.2-41.3 280.7-213.6 363.2c-16.7 8-36.1 8-52.8 0C57.3 420.7 16.5 239.2 16 140c-.1-26.2 16.3-47.9 38.3-57.2L242.7 2.9C246.8 1 251.4 0 256 0zM374.3 197.6c10.9-10.9 10.9-28.7 0-39.6s-28.7-10.9-39.6 0l-95.4 95.4-22.7-22.7c-10.9-10.9-28.7-10.9-39.6 0s-10.9 28.7 0 39.6l42.4 42.4c10.9 10.9 28.7 10.9 39.6 0l115.3-115.3z"/></svg>',
+            truck: '<svg class="svg-icon" viewBox="0 0 640 512"><path d="M48 0C21.5 0 0 21.5 0 48L0 368c0 26.5 21.5 48 48 48l16 0c0 53 43 96 96 96s96-43 96-96l128 0c0 53 43 96 96 96s96-43 96-96l32 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l0-64 0-32 0-18.7c0-17-6.7-33.3-18.7-45.3L512 64c-12-12-28.3-18.7-45.3-18.7L320 45.3 320 48c0-26.5-21.5-48-48-48L48 0zM160 368a48 48 0 1 1 0 96 48 48 0 1 1 0-96zm272 48a48 48 0 1 1 96 0 48 48 0 1 1 -96 0zM368 96l96 0 0 80-96 0 0-80zm-48 80l0 64c0 17.7 14.3 32 32 32l112 0 0 64-192 0 0-160 48 0z"/></svg>',
+            leaf: '<svg class="svg-icon" viewBox="0 0 512 512"><path d="M272 96c-78.6 0-145.1 51.5-167.7 122.5c33.6-17 71.5-26.5 111.7-26.5h88c8.8 0 16 7.2 16 16s-7.2 16-16 16H216c-65.5 0-119.6 53.9-120 119.4c-60.6-16.7-104-71.3-104-135.4C-8 117 47 64 112 64h240c70 0 128.4 52.7 137.4 120h16.6c8.8 0 16 7.2 16 16s-7.2 16-16 16h-80c-64.8 0-119.7-45.5-136.6-106.5c24.3-30 61.4-49.5 102.6-49.5h128c8.8 0 16 7.2 16 16s-7.2 16-16 16H272z"/></svg>',
+            pill: '<svg class="svg-icon" viewBox="0 0 512 512"><path d="M407 128c-58.4 0-106 47.6-106 106v84.7l106 106 106-106V234c0-58.4-47.6-106-106-106zM183 302c58.4 0 106-47.6 106-106v-84.7L183 5.3 77 111.3V196c0 58.4 47.6 106 106 106zM320 384l-64 64-64-64V278c0-35.3 28.7-64 64-64s64 28.7 64 64v106z"/></svg>',
+            file: '<svg class="svg-icon" viewBox="0 0 384 512"><path d="M0 64C0 28.7 28.7 0 64 0L224 0l0 128c0 17.7 14.3 32 32 32l128 0 0 288c0 35.3-28.7 64-64 64L64 512c-35.3 0-64-28.7-64-64L0 64zm384 64l-128 0L256 0 384 128z"/></svg>'
+        };
+
+        // Shared data
         const locations = {
             factories: [
                 { id: 1, name: "Rukuriri Tea Factory", region: "Meru", lat: 0.2345, lng: 37.5678, capacity: 120000, zoneId: 1 },
@@ -218,7 +188,6 @@
         let barChart = null;
         let isLoggedIn = false;
 
-        // Persistence keys
         const STORAGE_KEY = 'ktda_auth';
         const STORAGE_ROLE = 'ktda_role';
         const STORAGE_FILTER = 'ktda_filter_zone';
@@ -242,7 +211,6 @@
             return { logged: false };
         }
 
-        // Map functions
         function getZoneCenter(zoneId) {
             const zone = locations.teaZones.find(z => z.id === zoneId);
             return zone ? { lat: zone.lat, lng: zone.lng } : null;
@@ -260,30 +228,32 @@
             markers.centers.forEach(m => map.removeLayer(m));
             markers.zones.forEach(m => map.removeLayer(m));
             markers = { factories: [], farmers: [], centers: [], zones: [] };
+            
             let filteredFactories = currentFilterZone ? locations.factories.filter(f => f.zoneId === currentFilterZone) : locations.factories;
             let filteredFarmers = currentFilterZone ? locations.farmers.filter(f => f.zoneId === currentFilterZone) : locations.farmers;
             let filteredCenters = currentFilterZone ? locations.centers.filter(c => c.zoneId === currentFilterZone) : locations.centers;
             let filteredZones = currentFilterZone ? locations.teaZones.filter(z => z.id === currentFilterZone) : locations.teaZones;
+            
             filteredFactories.forEach(f => {
                 const marker = L.marker([f.lat, f.lng], { icon: L.divIcon({ html: '<div style="background:#e74c3c; width:12px; height:12px; border-radius:50%; border:2px solid white;"></div>', iconSize: [12,12] }) }).addTo(map);
-                marker.bindPopup(`<b>?? ${f.name}</b><br>Region: ${f.region}<br>Capacity: ${f.capacity.toLocaleString()} kg/day`);
+                marker.bindPopup(`<b>🏭 ${f.name}</b><br>Region: ${f.region}<br>Capacity: ${f.capacity.toLocaleString()} kg/day`);
                 markers.factories.push(marker);
             });
             filteredFarmers.forEach(f => {
                 const marker = L.marker([f.lat, f.lng], { icon: L.divIcon({ html: '<div style="background:#27ae60; width:12px; height:12px; border-radius:50%; border:2px solid white;"></div>', iconSize: [12,12] }) }).addTo(map);
-                marker.bindPopup(`<b>?? ${f.name}</b><br>ID: ${f.number}<br>${f.acres} acres`);
+                marker.bindPopup(`<b>👤 ${f.name}</b><br>ID: ${f.number}<br>${f.acres} acres`);
                 markers.farmers.push(marker);
             });
             filteredCenters.forEach(c => {
                 const marker = L.marker([c.lat, c.lng], { icon: L.divIcon({ html: '<div style="background:#f39c12; width:12px; height:12px; border-radius:50%; border:2px solid white;"></div>', iconSize: [12,12] }) }).addTo(map);
-                marker.bindPopup(`<b>?? ${c.name}</b><br>Factory: ${c.factory}<br>Weighbridge: ${c.has_weighbridge ? 'Yes' : 'No'}`);
+                marker.bindPopup(`<b>📍 ${c.name}</b><br>Factory: ${c.factory}<br>Weighbridge: ${c.has_weighbridge ? 'Yes' : 'No'}`);
                 markers.centers.push(marker);
             });
             filteredZones.forEach(z => {
                 const center = getZoneCenter(z.id);
                 if (center) {
                     const marker = L.marker([center.lat, center.lng], { icon: L.divIcon({ html: '<div style="background:#2c5e2e; width:12px; height:12px; border-radius:50%; border:2px solid white;"></div>', iconSize: [12,12] }) }).addTo(map);
-                    marker.bindPopup(`<b>?? ${z.name}</b><br>${z.acres.toLocaleString()} acres`);
+                    marker.bindPopup(`<b>🌿 ${z.name}</b><br>${z.acres.toLocaleString()} acres`);
                     markers.zones.push(marker);
                 }
             });
@@ -295,27 +265,34 @@
             const factories = currentFilterZone ? locations.factories.filter(f => f.zoneId === currentFilterZone) : locations.factories;
             const farmers = currentFilterZone ? locations.farmers.filter(f => f.zoneId === currentFilterZone) : locations.farmers;
             const centers = currentFilterZone ? locations.centers.filter(c => c.zoneId === currentFilterZone) : locations.centers;
+            
             let html = `<div class="panel-title">Filter by Tea Zone</div><div><button class="filter-btn ${!currentFilterZone ? 'filter-active' : ''}" onclick="filterMarkersByZone(null)">All Zones</button>`;
             zones.forEach(z => html += `<button class="filter-btn ${currentFilterZone === z.id ? 'filter-active' : ''}" onclick="filterMarkersByZone(${z.id})">${z.name}</button>`);
+            
             html += `</div><div class="panel-title">Factories</div>`;
-            factories.forEach(f => html += `<div class="list-item" onclick="zoomToLocation(${f.lat}, ${f.lng})"><div class="item-name">?? ${f.name}</div><div class="item-detail">${f.region}</div></div>`);
+            factories.forEach(f => html += `<div class="list-item" onclick="zoomToLocation(${f.lat}, ${f.lng})">${icons.file}<div><div class="item-name">${f.name}</div><div class="item-detail">${f.region}</div></div></div>`);
+            
             html += `<div class="panel-title">Farmers</div>`;
-            farmers.forEach(f => html += `<div class="list-item" onclick="zoomToLocation(${f.lat}, ${f.lng})"><div class="item-name">?? ${f.name}</div><div class="item-detail">${f.number} | ${f.acres} acres</div></div>`);
+            farmers.forEach(f => html += `<div class="list-item" onclick="zoomToLocation(${f.lat}, ${f.lng})"><svg class="svg-icon" viewBox="0 0 448 512"><path d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512l388.6 0c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304l-91.4 0z"/></svg><div><div class="item-name">${f.name}</div><div class="item-detail">${f.number} | ${f.acres} acres</div></div></div>`);
+            
             html += `<div class="panel-title">Buying Centers</div>`;
-            centers.forEach(c => html += `<div class="list-item" onclick="zoomToLocation(${c.lat}, ${c.lng})"><div class="item-name">?? ${c.name}</div><div class="item-detail">Factory: ${c.factory}</div></div>`);
+            centers.forEach(c => html += `<div class="list-item" onclick="zoomToLocation(${c.lat}, ${c.lng})"><svg class="svg-icon" viewBox="0 0 384 512"><path d="M215.7 499.2C267 435 384 279.4 384 192C384 86 298 0 192 0S0 86 0 192c0 87.4 117 243 168.3 307.2c12.3 15.3 35.1 15.3 47.4 0zM192 128a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"/></svg><div><div class="item-name">${c.name}</div><div class="item-detail">Factory: ${c.factory}</div></div></div>`);
+            
             sidePanel.innerHTML = html;
         }
+        
         function zoomToLocation(lat, lng) { if (map) map.setView([lat, lng], 14); }
+        
         function initMap() {
             if (map) return;
             map = L.map('map').setView([0.5, 36.5], 8);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '� OpenStreetMap contributors' }).addTo(map);
+            // Using OpenStreetMap (free, no API key needed)
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(map);
             updateMapMarkers();
             renderSidePanels();
             setTimeout(() => map.invalidateSize(), 200);
         }
 
-        // Admin dashboard functions
         function updateAdminCharts() {
             const ctx1 = document.getElementById('pieChart')?.getContext('2d');
             const ctx2 = document.getElementById('barChart')?.getContext('2d');
@@ -343,6 +320,7 @@
             pieChart = new Chart(ctx1, { type: 'pie', data: { labels: labels, datasets: [{ data: data, backgroundColor: ['#4CAF50','#FF9800','#2196F3','#e74c3c'] }] } });
             barChart = new Chart(ctx2, { type: 'bar', data: { labels: labels, datasets: [{ label: 'Value', data: data, backgroundColor: '#4CAF50' }] } });
         }
+        
         function renderAdminDashboard() {
             const container = document.getElementById('adminDashboardContent');
             if (!container) return;
@@ -359,6 +337,7 @@
             container.innerHTML = tableHtml;
             updateAdminCharts();
         }
+        
         function switchAdminSubView(view) {
             adminSubView = view;
             if (isLoggedIn && currentRole === 'admin') saveLoginState(currentRole, currentFilterZone, view);
@@ -366,18 +345,19 @@
             if (menu) menu.classList.remove('show');
             renderAdminDashboard();
         }
+        
         function toggleMenu(e) {
             e.stopPropagation();
             const menu = document.getElementById('threeDotContent');
             if (menu) menu.classList.toggle('show');
         }
+        
         function closeMenuOnClickOutside(event) {
             const menu = document.getElementById('threeDotContent');
             const dotMenu = document.querySelector('.three-dot-menu');
             if (menu && dotMenu && !dotMenu.contains(event.target)) menu.classList.remove('show');
         }
 
-        // Record forms (clerk)
         let currentRecordType = '';
         function openModal(type) {
             currentRecordType = type;
@@ -436,12 +416,7 @@
             const location = document.getElementById('soilLocation').value;
             const oc = parseFloat(document.getElementById('soilOC').value);
             if (!location || isNaN(oc)) { alert("Enter location and OC%"); return; }
-            soilSamples.push({
-                location, oc,
-                ph: document.getElementById('soilPH').value,
-                n: document.getElementById('soilN').value,
-                date: new Date().toISOString()
-            });
+            soilSamples.push({ location, oc, ph: document.getElementById('soilPH').value, n: document.getElementById('soilN').value, date: new Date().toISOString() });
             alert("Soil sample recorded!");
             closeModal();
         }
@@ -460,11 +435,7 @@
             const area = parseFloat(document.getElementById('carbonArea').value);
             const methodology = document.getElementById('carbonMethod').value;
             if (!name || isNaN(area) || area <= 0) { alert("Enter name and area"); return; }
-            const newId = carbonProjects.length + 1;
-            carbonProjects.push({
-                id: newId, name, methodology: methodology === "VM0042 (SOC)" ? "VM0042" : "VM0047",
-                areaHa: area, estCredits: area * 5, status: "Pending", issued: 0
-            });
+            carbonProjects.push({ id: carbonProjects.length + 1, name, methodology: methodology === "VM0042 (SOC)" ? "VM0042" : "VM0047", areaHa: area, estCredits: area * 5, status: "Pending", issued: 0 });
             alert("Carbon project registered!");
             closeModal();
             if (currentRole === 'admin') { renderAdminDashboard(); }
@@ -478,6 +449,7 @@
             document.getElementById('appContainer').style.display = 'none';
             currentRole = null;
         }
+        
         function doLogin() {
             const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
@@ -487,31 +459,45 @@
                 saveLoginState(currentRole, null, 'farmers');
                 document.getElementById('loginOverlay').style.display = 'none';
                 document.getElementById('appContainer').style.display = 'flex';
-                const roleHtml = currentRole === 'admin' ? 
-                    '<i class="fas fa-user-shield"></i> Admin <div class="three-dot-menu" onclick="toggleMenu(event)"><i class="fas fa-ellipsis-v"></i><div id="threeDotContent" class="three-dot-content"><a onclick="switchAdminSubView(\'farmers\')">????? Farmers</a><a onclick="switchAdminSubView(\'fertilizer\')">?? Fertilizer Assets</a><a onclick="switchAdminSubView(\'carbon\')">?? Carbon & SOC</a><a onclick="switchAdminSubView(\'reports\')">?? Reports</a></div></div>' : 
-                    '<i class="fas fa-clipboard-list"></i> Field Clerk';
+                
+                const roleHtml = currentRole === 'admin' ?
+                    `<span style="display:flex;align-items:center;gap:5px;">${icons.shield} Admin</span>
+                     <div class="three-dot-menu" onclick="toggleMenu(event)">
+                        <svg class="svg-icon" viewBox="0 0 448 512"><path d="M8 256a56 56 0 1 1 112 0A56 56 0 1 1 8 256zm160 0a56 56 0 1 1 112 0 56 56 0 1 1 -112 0zm216-56a56 56 0 1 1 0 112 56 56 0 1 1 0-112z"/></svg>
+                        <div id="threeDotContent" class="three-dot-content">
+                            <a onclick="switchAdminSubView('farmers')">${icons.file} Farmers</a>
+                            <a onclick="switchAdminSubView('fertilizer')">${icons.pill} Fertilizer Assets</a>
+                            <a onclick="switchAdminSubView('carbon')">${icons.leaf} Carbon & SOC</a>
+                            <a onclick="switchAdminSubView('reports')">${icons.clipboard} Reports</a>
+                        </div>
+                     </div>` :
+                    `<span style="display:flex;align-items:center;gap:5px;">${icons.clipboard} Field Clerk</span>`;
+                
                 document.getElementById('userRoleBadge').innerHTML = roleHtml;
                 buildUI();
             } else {
                 document.getElementById('loginError').innerText = 'Invalid credentials';
             }
         }
+        
         function buildUI() {
             const tabsContainer = document.getElementById('tabsContainer');
             const pageContainer = document.getElementById('pageContainer');
             tabsContainer.innerHTML = '';
             pageContainer.innerHTML = '';
+            
             let tabs = currentRole === 'admin' ? [
-                { id: 'map', label: '??? Map', icon: 'map' },
-                { id: 'dashboard', label: '?? Dashboard', icon: 'chart-line' }
+                { id: 'map', label: 'Map', icon: icons.map },
+                { id: 'dashboard', label: 'Dashboard', icon: icons.chart }
             ] : [
-                { id: 'map', label: '??? Map', icon: 'map' },
-                { id: 'records', label: '?? Records', icon: 'clipboard-list' }
+                { id: 'map', label: 'Map', icon: icons.map },
+                { id: 'records', label: 'Records', icon: icons.clipboard }
             ];
+            
             tabs.forEach(tab => {
                 const btn = document.createElement('div');
                 btn.className = 'tab';
-                btn.innerHTML = `<i class="fas fa-${tab.icon}"></i><span>${tab.label}</span>`;
+                btn.innerHTML = `${tab.icon}<span>${tab.label}</span>`;
                 btn.onclick = () => showPage(tab.id);
                 tabsContainer.appendChild(btn);
                 const pageDiv = document.createElement('div');
@@ -519,16 +505,19 @@
                 pageDiv.className = 'page';
                 pageContainer.appendChild(pageDiv);
             });
+            
             document.getElementById('page-map').innerHTML = `<div class="map-layout"><div class="side-panel"></div><div class="map-wrapper"><div class="map-container"><div id="map"></div></div><div class="legend"><div><span class="legend-color" style="background:#e74c3c;"></span> Factories</div><div><span class="legend-color" style="background:#27ae60;"></span> Farmers</div><div><span class="legend-color" style="background:#f39c12;"></span> Buying Centers</div><div><span class="legend-color" style="background:#2c5e2e;"></span> Tea Zones</div></div></div></div>`;
+            
             initMap();
+            
             if (currentRole === 'clerk') {
                 document.getElementById('page-records').innerHTML = `
                     <div class="flex-content">
                         <div class="records-grid">
-                            <div class="record-card" onclick="openModal('delivery')"><div class="record-icon">??</div><div>Record Delivery</div></div>
-                            <div class="record-card" onclick="openModal('soil')"><div class="record-icon">??</div><div>Soil Sample</div></div>
-                            <div class="record-card" onclick="openModal('fertilizer')"><div class="record-icon">??</div><div>Fertilizer Distribution</div></div>
-                            <div class="record-card" onclick="openModal('carbon')"><div class="record-icon">??</div><div>Carbon Project</div></div>
+                            <div class="record-card" onclick="openModal('delivery')"><div class="record-icon">${icons.truck}</div><div>Record Delivery</div></div>
+                            <div class="record-card" onclick="openModal('soil')"><div class="record-icon">${icons.leaf}</div><div>Soil Sample</div></div>
+                            <div class="record-card" onclick="openModal('fertilizer')"><div class="record-icon">${icons.pill}</div><div>Fertilizer Distribution</div></div>
+                            <div class="record-card" onclick="openModal('carbon')"><div class="record-icon">${icons.leaf}</div><div>Carbon Project</div></div>
                         </div>
                     </div>`;
             } else {
@@ -545,12 +534,14 @@
                     </div>`;
                 renderAdminDashboard();
             }
+            
             const pages = document.querySelectorAll('.page');
             const tabsBtns = document.querySelectorAll('.tab');
             if (pages.length) pages[0].classList.add('active');
             if (tabsBtns.length) tabsBtns[0].classList.add('active');
             if (currentFilterZone) filterMarkersByZone(currentFilterZone);
         }
+        
         function showPage(pageId) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             const target = document.getElementById(`page-${pageId}`);
@@ -560,6 +551,7 @@
             if (activeTab) activeTab.classList.add('active');
             if (pageId === 'map' && map) setTimeout(() => map.invalidateSize(), 100);
         }
+        
         function exportCSV() {
             let csv = "Farmers\nID,Name,Phone,Acreage,Zone\n";
             locations.farmers.forEach(f => csv += `${f.number},${f.name},${f.phone},${f.acres},${locations.teaZones.find(z=>z.id===f.zoneId)?.name}\n`);
@@ -572,7 +564,6 @@
             a.click();
         }
 
-        // Initialize
         const savedState = loadLoginState();
         if (savedState.logged) {
             currentRole = savedState.role;
@@ -581,9 +572,20 @@
             adminSubView = savedState.adminView || 'farmers';
             document.getElementById('loginOverlay').style.display = 'none';
             document.getElementById('appContainer').style.display = 'flex';
-            const roleHtml = currentRole === 'admin' ? 
-                '<i class="fas fa-user-shield"></i> Admin <div class="three-dot-menu" onclick="toggleMenu(event)"><i class="fas fa-ellipsis-v"></i><div id="threeDotContent" class="three-dot-content"><a onclick="switchAdminSubView(\'farmers\')">????? Farmers</a><a onclick="switchAdminSubView(\'fertilizer\')">?? Fertilizer Assets</a><a onclick="switchAdminSubView(\'carbon\')">?? Carbon & SOC</a><a onclick="switchAdminSubView(\'reports\')">?? Reports</a></div></div>' : 
-                '<i class="fas fa-clipboard-list"></i> Field Clerk';
+            
+            const roleHtml = currentRole === 'admin' ?
+                `<span style="display:flex;align-items:center;gap:5px;">${icons.shield} Admin</span>
+                 <div class="three-dot-menu" onclick="toggleMenu(event)">
+                    <svg class="svg-icon" viewBox="0 0 448 512"><path d="M8 256a56 56 0 1 1 112 0A56 56 0 1 1 8 256zm160 0a56 56 0 1 1 112 0 56 56 0 1 1 -112 0zm216-56a56 56 0 1 1 0 112 56 56 0 1 1 0-112z"/></svg>
+                    <div id="threeDotContent" class="three-dot-content">
+                        <a onclick="switchAdminSubView('farmers')">${icons.file} Farmers</a>
+                        <a onclick="switchAdminSubView('fertilizer')">${icons.pill} Fertilizer Assets</a>
+                        <a onclick="switchAdminSubView('carbon')">${icons.leaf} Carbon & SOC</a>
+                        <a onclick="switchAdminSubView('reports')">${icons.clipboard} Reports</a>
+                    </div>
+                 </div>` :
+                `<span style="display:flex;align-items:center;gap:5px;">${icons.clipboard} Field Clerk</span>`;
+                
             document.getElementById('userRoleBadge').innerHTML = roleHtml;
             buildUI();
         } else {
@@ -591,7 +593,6 @@
             document.getElementById('appContainer').style.display = 'none';
         }
 
-        // Global functions
         window.doLogin = doLogin;
         window.logout = logout;
         window.filterMarkersByZone = filterMarkersByZone;
@@ -610,5 +611,3 @@
     </script>
 </body>
 </html>
-
-
